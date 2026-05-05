@@ -53,11 +53,58 @@ export default function ReportsPage() {
     return { ...p, totalTasks: pTasks.length, doneTasks: pDone, progress: pTasks.length > 0 ? Math.round((pDone / pTasks.length) * 100) : 0 };
   });
 
+  const exportToExcel = () => {
+    if (tasks.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    // Prepare data
+    const headers = ['Task ID', 'Title', 'Description', 'Status', 'Priority', 'Assignee', 'Project', 'Due Date', 'Created At'];
+    const rows = tasks.map(t => [
+      t.id,
+      t.title,
+      t.description || '',
+      TASK_STATUS_CONFIG[t.status]?.label || t.status,
+      TASK_PRIORITY_CONFIG[t.priority]?.label || t.priority,
+      members.find(m => m.id === t.assignee_id)?.full_name || 'Unassigned',
+      projects.find(p => p.id === t.project_id)?.name || 'None',
+      t.due_date ? new Date(t.due_date).toLocaleDateString() : 'N/A',
+      new Date(t.created_at).toLocaleString()
+    ]);
+
+    // CSV content with BOM for Excel compatibility
+    const csvContent = "\uFEFF" + [
+      headers.join(','),
+      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Nexus_Overall_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (loading) return <AppLayout><div className="loading-page"><div className="spinner" /></div></AppLayout>;
 
   return (
     <AppLayout>
-      <div className="page-header"><div><h1>Reports</h1><div className="subtitle">Analytics & insights</div></div></div>
+      <div className="page-header">
+        <div>
+          <h1>Reports</h1>
+          <div className="subtitle">Analytics & insights</div>
+        </div>
+        <div className="page-actions">
+          <button className="btn btn-secondary" onClick={exportToExcel}>
+            📥 Download Overall Report
+          </button>
+        </div>
+      </div>
 
       {/* Summary KPIs */}
       <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>

@@ -240,7 +240,7 @@ input, textarea, select { font-family: inherit; color: inherit; }
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   margin-bottom: 28px;
 }
@@ -404,14 +404,22 @@ input, textarea, select { font-family: inherit; color: inherit; }
 }
 
 /* Kanban */
-.kanban-board { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px; }
+.kanban-board { 
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px; 
+  padding: 4px 0 20px 0;
+  margin-top: 10px;
+}
+
 .kanban-column {
-  min-width: 300px; width: 300px; flex-shrink: 0;
   background: var(--bg-glass);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   display: flex; flex-direction: column;
-  max-height: calc(100vh - 200px);
+  max-height: calc(100vh - 220px);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
 }
 .kanban-column-header {
   padding: 16px 18px;
@@ -658,7 +666,7 @@ input, textarea, select { font-family: inherit; color: inherit; }
   .main-content { margin-left: 0; padding: 16px; padding-top: calc(var(--header-height) + 16px); }
   .header { left: 0; padding: 0 16px; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .kanban-column { min-width: 260px; width: 260px; }
+  .kanban-board { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 480px) {
   .kpi-grid { grid-template-columns: 1fr; }

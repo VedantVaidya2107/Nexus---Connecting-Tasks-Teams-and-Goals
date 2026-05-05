@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import AppLayout from '@/components/AppLayout';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { TASK_STATUS_CONFIG, TASK_PRIORITY_CONFIG } from '@/lib/types';
 import type { Task, ActivityLog, Profile } from '@/lib/types';
@@ -24,10 +25,12 @@ const chartDefaults = {
 };
 
 export default function DashboardPage() {
+  const { profile } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activities, setActivities] = useState<(ActivityLog & { user?: Profile })[]>([]);
   const [members, setMembers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterUser, setFilterUser] = useState<string>('all');
 
   const fetchData = useCallback(async () => {
     const [tasksRes, actRes, membersRes] = await Promise.all([
@@ -43,21 +46,25 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const filteredTasks = tasks.filter(t => filterUser === 'all' || t.assignee_id === filterUser);
+
   const statusCounts = Object.fromEntries(
-    Object.keys(TASK_STATUS_CONFIG).map(s => [s, tasks.filter(t => t.status === s).length])
+    Object.keys(TASK_STATUS_CONFIG).map(s => [s, filteredTasks.filter(t => t.status === s).length])
   );
   const completed = statusCounts['done'] || 0;
-  const total = tasks.length;
-  const overdue = tasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done').length;
+  const total = filteredTasks.length;
+  const overdue = filteredTasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done').length;
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   const kpis = [
-    { label: 'Total Tasks', value: total, icon: '📋', color: 'var(--blue)', change: '+12%', positive: true, href: '/tasks' },
-    { label: 'Completed', value: completed, icon: '✅', color: 'var(--green)', change: `${completionRate}%`, positive: true, href: '/tasks?status=done' },
-    { label: 'In Progress', value: statusCounts['in_progress'] || 0, icon: '🔄', color: 'var(--cyan)', change: '', positive: true, href: '/tasks?status=in_progress' },
-    { label: 'Overdue', value: overdue, icon: '⚠️', color: 'var(--red)', change: overdue > 0 ? 'Needs attention' : 'None', positive: overdue === 0, href: '/tasks?filter=overdue' },
-    { label: 'Blocked', value: statusCounts['blocked'] || 0, icon: '🚫', color: 'var(--amber)', change: '', positive: true, href: '/tasks?status=blocked' },
-    { label: 'Team Members', value: members.length, icon: '👥', color: 'var(--purple)', change: 'Active', positive: true, href: '/team' },
+    { label: 'Total Tasks', value: total, icon: '📋', color: 'var(--blue)', href: '/tasks' },
+    { label: 'Pending', value: statusCounts['pending'] || 0, icon: '⏳', color: 'var(--slate)', href: '/tasks?status=pending' },
+    { label: 'In Progress', value: statusCounts['in_progress'] || 0, icon: '🔄', color: 'var(--cyan)', href: '/tasks?status=in_progress' },
+    { label: 'Awaiting from Zoho', value: statusCounts['awaiting_zoho'] || 0, icon: '🏢', color: 'var(--amber)', href: '/tasks?status=awaiting_zoho' },
+    { label: 'Awaiting from Client', value: statusCounts['awaiting_client'] || 0, icon: '👤', color: 'var(--amber)', href: '/tasks?status=awaiting_client' },
+    { label: 'Awaiting from Team Member', value: statusCounts['awaiting_team'] || 0, icon: '👥', color: 'var(--amber)', href: '/tasks?status=awaiting_team' },
+    { label: 'Done', value: completed, icon: '✅', color: 'var(--green)', href: '/tasks?status=done' },
+    { label: 'Cancelled', value: statusCounts['cancelled'] || 0, icon: '🚫', color: 'var(--red)', href: '/tasks?status=cancelled' },
   ];
 
   const statusChartData = {
@@ -73,7 +80,7 @@ export default function DashboardPage() {
     labels: Object.values(TASK_PRIORITY_CONFIG).map(c => c.label),
     datasets: [{
       label: 'Tasks',
-      data: (['high', 'medium', 'low'] as const).map(p => tasks.filter(t => t.priority === p).length),
+      data: (['high', 'medium', 'low'] as const).map(p => filteredTasks.filter(t => t.priority === p).length),
       backgroundColor: Object.values(TASK_PRIORITY_CONFIG).map(c => c.color + '80'),
       borderColor: Object.values(TASK_PRIORITY_CONFIG).map(c => c.color),
       borderWidth: 1, borderRadius: 8,
@@ -104,10 +111,29 @@ export default function DashboardPage() {
     labels: last7.map(d => new Date(d).toLocaleDateString('en', { weekday: 'short' })),
     datasets: [{
       label: 'Completed',
-      data: last7.map(d => tasks.filter(t => t.status === 'done' && t.updated_at?.startsWith(d)).length),
+      data: last7.map(d => filteredTasks.filter(t => t.status === 'done' && t.updated_at?.startsWith(d)).length),
       borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.1)',
       fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#6366f1',
     }],
+  };
+
+  const exportData = () => {
+    if (tasks.length === 0) return;
+    const headers = ['Title', 'Status', 'Priority', 'Assignee', 'Due Date'];
+    const rows = tasks.map(t => [
+      t.title,
+      TASK_STATUS_CONFIG[t.status]?.label || t.status,
+      TASK_PRIORITY_CONFIG[t.priority]?.label || t.priority,
+      members.find(m => m.id === t.assignee_id)?.full_name || 'Unassigned',
+      t.due_date ? new Date(t.due_date).toLocaleDateString() : 'N/A'
+    ]);
+    const csv = "\uFEFF" + [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Nexus_Dashboard_Report_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
   };
 
   if (loading) return <AppLayout><div className="loading-page"><div className="spinner" /></div></AppLayout>;
@@ -119,7 +145,23 @@ export default function DashboardPage() {
           <h1>Dashboard</h1>
           <div className="subtitle">Overview of your workspace</div>
         </div>
-        <div className="page-actions">
+        <div className="page-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {profile?.role === 'admin' && (
+            <select 
+              className="form-select" 
+              style={{ width: 'auto', padding: '8px 12px', fontSize: '13px', minWidth: '180px' }}
+              value={filterUser}
+              onChange={e => setFilterUser(e.target.value)}
+            >
+              <option value="all">All Team Members</option>
+              {members.map(m => (
+                <option key={m.id} value={m.id}>{m.full_name}</option>
+              ))}
+            </select>
+          )}
+          <button className="btn btn-secondary" onClick={exportData} title="Export overall data">
+            📥 Export
+          </button>
           <button className="btn btn-primary" onClick={() => window.location.href = '/tasks'}>
             ＋ New Task
           </button>
@@ -184,26 +226,28 @@ export default function DashboardPage() {
 
       {/* Bottom Section: Activity + Overdue */}
       <div className="charts-grid">
-        <div className="glass-card chart-card">
-          <h3>Recent Activity</h3>
-          {activities.length === 0 ? (
-            <div className="empty-state"><div className="empty-icon">📭</div><h3>No activity yet</h3><p>Actions will appear here as your team works.</p></div>
-          ) : (
-            <ul className="activity-feed">
-              {activities.map(a => (
-                <li key={a.id} className="activity-item">
-                  <div className="user-avatar" style={{ width: 32, height: 32, fontSize: 12, flexShrink: 0 }}>
-                    {a.user?.full_name?.[0] || '?'}
-                  </div>
-                  <div>
-                    <div className="activity-text"><strong>{a.user?.full_name || 'Someone'}</strong> {a.action} {a.entity_name && <em>{a.entity_name}</em>}</div>
-                    <div className="activity-time">{new Date(a.created_at).toLocaleString()}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {profile?.role === 'admin' && (
+          <div className="glass-card chart-card">
+            <h3>Recent Activity</h3>
+            {activities.length === 0 ? (
+              <div className="empty-state"><div className="empty-icon">📭</div><h3>No activity yet</h3><p>Actions will appear here as your team works.</p></div>
+            ) : (
+              <ul className="activity-feed">
+                {activities.map(a => (
+                  <li key={a.id} className="activity-item">
+                    <div className="user-avatar" style={{ width: 32, height: 32, fontSize: 12, flexShrink: 0 }}>
+                      {a.user?.full_name?.[0] || '?'}
+                    </div>
+                    <div>
+                      <div className="activity-text"><strong>{a.user?.full_name || 'Someone'}</strong> {a.action} {a.entity_name && <em>{a.entity_name}</em>}</div>
+                      <div className="activity-time">{new Date(a.created_at).toLocaleString()}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         <div className="glass-card chart-card">
           <h3>Overdue Tasks</h3>
@@ -215,7 +259,7 @@ export default function DashboardPage() {
                 <tr><th>Task</th><th>Assignee</th><th>Due</th></tr>
               </thead>
               <tbody>
-                {tasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done').slice(0, 8).map(t => (
+                {filteredTasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done').slice(0, 8).map(t => (
                   <tr key={t.id}>
                     <td style={{ fontWeight: 600 }}>{t.title}</td>
                     <td>{(t.assignee as unknown as Profile)?.full_name || 'Unassigned'}</td>

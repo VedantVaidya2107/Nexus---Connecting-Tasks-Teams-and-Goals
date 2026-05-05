@@ -73,3 +73,38 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus, userI
     return { success: false, message: 'Server error' };
   }
 }
+
+export async function updateTask(taskId: string, formData: any, userId: string) {
+  try {
+    const { title, description, status, priority, assignee_id, project_id, due_date } = formData;
+
+    const { error } = await supabaseAdmin.from('tasks').update({
+      title,
+      description,
+      status: status as TaskStatus,
+      priority: priority as TaskPriority,
+      assignee_id,
+      project_id,
+      due_date,
+      updated_at: new Date().toISOString()
+    }).eq('id', taskId);
+
+    if (error) return { success: false, message: error.message };
+
+    // Log Activity
+    await supabaseAdmin.from('activity_log').insert({
+      user_id: userId,
+      action: 'updated task',
+      entity_type: 'task',
+      entity_id: taskId,
+      entity_name: title
+    });
+
+    revalidatePath('/tasks');
+    revalidatePath('/dashboard');
+    
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, message: 'Server error' };
+  }
+}

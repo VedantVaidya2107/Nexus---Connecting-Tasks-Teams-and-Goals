@@ -27,21 +27,25 @@ export default function CalendarPage() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const today = new Date().toDateString();
 
+  const formatDate = (y: number, m: number, d: number) => {
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  };
+
   const cells: { day: number; isCurrentMonth: boolean; date: string }[] = [];
   // Prev month
   const prevDays = new Date(year, month, 0).getDate();
   for (let i = firstDay - 1; i >= 0; i--) {
     const d = prevDays - i;
-    cells.push({ day: d, isCurrentMonth: false, date: new Date(year, month - 1, d).toISOString().split('T')[0] });
+    cells.push({ day: d, isCurrentMonth: false, date: formatDate(year, month - 1, d) });
   }
   // Current
   for (let d = 1; d <= daysInMonth; d++) {
-    cells.push({ day: d, isCurrentMonth: true, date: new Date(year, month, d).toISOString().split('T')[0] });
+    cells.push({ day: d, isCurrentMonth: true, date: formatDate(year, month, d) });
   }
   // Next
   const remaining = 42 - cells.length;
   for (let d = 1; d <= remaining; d++) {
-    cells.push({ day: d, isCurrentMonth: false, date: new Date(year, month + 1, d).toISOString().split('T')[0] });
+    cells.push({ day: d, isCurrentMonth: false, date: formatDate(year, month + 1, d) });
   }
 
   const nav = (dir: number) => setCurrentDate(new Date(year, month + dir, 1));

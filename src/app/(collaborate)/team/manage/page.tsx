@@ -15,6 +15,7 @@ export default function TeamManagePage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -108,6 +109,16 @@ export default function TeamManagePage() {
         </button>
       </div>
 
+      <div className="filter-bar" style={{ marginBottom: '20px' }}>
+        <div className="search-bar" style={{ flex: 1, minWidth: '300px' }}>
+          <input 
+            placeholder="Search by name or email..." 
+            value={searchQuery} 
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
       <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
         <table className="data-table">
           <thead>
@@ -121,7 +132,12 @@ export default function TeamManagePage() {
             </tr>
           </thead>
           <tbody>
-            {members.map(m => (
+            {members
+              .filter(m => 
+                m.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                m.email.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+              .map(m => (
               <tr key={m.id}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

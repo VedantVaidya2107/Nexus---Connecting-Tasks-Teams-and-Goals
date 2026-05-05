@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { TASK_STATUS_CONFIG, TASK_PRIORITY_CONFIG } from '@/lib/types';
 import type { Task, TaskStatus, TaskPriority, Profile, Project } from '@/lib/types';
 import toast from 'react-hot-toast';
-import { createTask, updateTaskStatus } from '@/app/actions/tasks';
+import { createTask, updateTaskStatus, updateTask } from '@/actions/tasks';
 
 const STATUSES: TaskStatus[] = ['pending', 'in_progress', 'awaiting_zoho', 'awaiting_client', 'awaiting_team', 'done', 'cancelled'];
 
@@ -23,6 +23,7 @@ export default function TasksPage() {
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [filterUser, setFilterUser] = useState<string>('all');
   const [filterOverdue, setFilterOverdue] = useState(false);
 
   // Form state
@@ -103,8 +104,8 @@ export default function TasksPage() {
     };
 
     if (editTask) {
-      const { error } = await supabase.from('tasks').update(payload).eq('id', editTask.id);
-      if (error) { toast.error(error.message); return; }
+      const res = await updateTask(editTask.id, payload, user?.id || '');
+      if (!res.success) { toast.error(res.message || 'Error'); return; }
       toast.success('Task updated');
     } else {
       const res = await createTask(payload, user?.id || '');
@@ -130,8 +131,15 @@ export default function TasksPage() {
   };
 
   const filtered = tasks.filter(t => {
-    if (filterStatus !== 'all' && t.status !== filterStatus) return false;
+    if (filterStatus !== 'all') {
+      if (filterStatus === 'awaiting') {
+        if (!['awaiting_zoho', 'awaiting_client', 'awaiting_team'].includes(t.status)) return false;
+      } else if (t.status !== filterStatus) {
+        return false;
+      }
+    }
     if (filterPriority !== 'all' && t.priority !== filterPriority) return false;
+    if (filterUser !== 'all' && t.assignee_id !== filterUser) return false;
     if (filterOverdue) {
       const isOverdue = t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done';
       if (!isOverdue) return false;
@@ -150,21 +158,50 @@ export default function TasksPage() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <div className="tab-bar">
+      {/* Compact Status KPI Strip - only in List view (Kanban columns already show this) */}
+      {view === 'list' && (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '20px' }}>
+        {STATUSES.map(s => {
+          const count = tasks.filter(t => t.status === s).length;
+          const cfg = TASK_STATUS_CONFIG[s];
+          return (
+            <div
+              key={s}
+              onClick={() => setFilterStatus(filterStatus === s ? 'all' : s)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '8px 14px', borderRadius: '10px',
+                background: filterStatus === s ? cfg.color + '25' : 'var(--bg-glass)',
+                border: `1px solid ${filterStatus === s ? cfg.color + '60' : 'var(--border)'}`,
+                cursor: 'pointer', transition: 'all 0.15s ease',
+                fontSize: '13px', fontWeight: 500,
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.color, flexShrink: 0 }} />
+              <span style={{ color: 'var(--text-secondary)' }}>{cfg.label}</span>
+              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{count}</span>
+            </div>
+          );
+        })}
+      </div>
+      )}
+
+      {/* Controls Row: Tabs + Filters */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div className="tab-bar" style={{ marginBottom: 0 }}>
           <button className={`tab-item ${view === 'kanban' ? 'active' : ''}`} onClick={() => setView('kanban')}>Kanban</button>
           <button className={`tab-item ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>List</button>
         </div>
         <div className="filter-bar" style={{ marginBottom: 0 }}>
-          <select className="form-select" style={{ width: 'auto', padding: '6px 12px', fontSize: '13px' }} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-            <option value="all">All Status</option>
-            {STATUSES.map(s => <option key={s} value={s}>{TASK_STATUS_CONFIG[s].label}</option>)}
-          </select>
           <select className="form-select" style={{ width: 'auto', padding: '6px 12px', fontSize: '13px' }} value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
             <option value="all">All Priority</option>
             <option value="high">High</option>
             <option value="medium">Medium</option>
             <option value="low">Low</option>
+          </select>
+          <select className="form-select" style={{ width: 'auto', padding: '6px 12px', fontSize: '13px' }} value={filterUser} onChange={e => setFilterUser(e.target.value)}>
+            <option value="all">All Users</option>
+            {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
           </select>
         </div>
       </div>
