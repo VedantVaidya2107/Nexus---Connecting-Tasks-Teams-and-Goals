@@ -1,0 +1,97 @@
+'use client';
+
+import React, { useEffect, useState, useCallback } from 'react';
+import AppLayout from '@/components/AppLayout';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import type { DailyUpdate, Profile } from '@/lib/types';
+import toast from 'react-hot-toast';
+
+export default function StandupPage() {
+  const { user } = useAuth();
+  const [updates, setUpdates] = useState<(DailyUpdate & { user?: Profile })[]>([]);
+  const [myUpdate, setMyUpdate] = useState<DailyUpdate | null>(null);
+  const [yesterday, setYesterday] = useState('');
+  const [today, setToday] = useState('');
+  const [blockers, setBlockers] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const fetchData = useCallback(async () => {
+    const [allRes, myRes] = await Promise.all([
+      supabase.from('daily_updates').select('*, user:profiles(*)').eq('date', todayStr).order('created_at'),
+      user ? supabase.from('daily_updates').select('*').eq('user_id', user.id).eq('date', todayStr).maybeSingle() : Promise.resolve({ data: null }),
+    ]);
+    if (allRes.data) setUpdates(allRes.data as (DailyUpdate & { user?: Profile })[]);
+    if (myRes.data) {
+      setMyUpdate(myRes.data as DailyUpdate);
+      setYesterday((myRes.data as DailyUpdate).completed_yesterday || '');
+      setToday((myRes.data as DailyUpdate).planned_today || '');
+      setBlockers((myRes.data as DailyUpdate).blockers || '');
+    }
+    setLoading(false);
+  }, [user, todayStr]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const saveUpdate = async () => {
+    const payload = { user_id: user!.id, date: todayStr, completed_yesterday: yesterday, planned_today: today, blockers };
+    if (myUpdate) {
+      await supabase.from('daily_updates').update(payload).eq('id', myUpdate.id);
+    } else {
+      await supabase.from('daily_updates').insert(payload);
+    }
+    toast.success('Standup saved!');
+    fetchData();
+  };
+
+  if (loading) return <AppLayout><div className="loading-page"><div className="spinner" /></div></AppLayout>;
+
+  return (
+    <AppLayout>
+      <div className="page-header"><div><h1>Daily Standup</h1><div className="subtitle">{new Date().toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</div></div></div>
+
+      {/* My Update Form */}
+      <div className="glass-card" style={{ padding: '28px', marginBottom: '28px' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '20px' }}>📝 Your Update {myUpdate ? '(Saved ✓)' : ''}</h3>
+        <div className="form-group">
+          <label className="form-label">✅ What did you complete yesterday?</label>
+          <textarea className="form-textarea" value={yesterday} onChange={e => setYesterday(e.target.value)} placeholder="List your completions..." style={{ minHeight: '80px' }} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">🎯 What are you working on today?</label>
+          <textarea className="form-textarea" value={today} onChange={e => setToday(e.target.value)} placeholder="List your plans..." style={{ minHeight: '80px' }} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">🚧 Any blockers?</label>
+          <textarea className="form-textarea" value={blockers} onChange={e => setBlockers(e.target.value)} placeholder="Describe blockers or type 'None'" style={{ minHeight: '60px' }} />
+        </div>
+        <button className="btn btn-primary" onClick={saveUpdate}>{myUpdate ? 'Update' : 'Submit'}</button>
+      </div>
+
+      {/* Team Updates */}
+      <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>Team Updates ({updates.length})</h3>
+      {updates.length === 0 ? (
+        <div className="empty-state"><div className="empty-icon">🎯</div><h3>No updates yet today</h3><p>Be the first to share your standup!</p></div>
+      ) : (
+        <div style={{ display: 'grid', gap: '16px' }}>
+          {updates.map(u => (
+            <div key={u.id} className="glass-card" style={{ padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                <div className="user-avatar" style={{ width: 36, height: 36, fontSize: 13 }}>{u.user?.full_name?.[0] || '?'}</div>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{u.user?.full_name || 'Unknown'}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{new Date(u.created_at).toLocaleTimeString()}</div>
+                </div>
+              </div>
+              {u.completed_yesterday && <div style={{ marginBottom: '10px' }}><strong style={{ fontSize: '12px', color: 'var(--green)' }}>YESTERDAY:</strong><p style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.5 }}>{u.completed_yesterday}</p></div>}
+              {u.planned_today && <div style={{ marginBottom: '10px' }}><strong style={{ fontSize: '12px', color: 'var(--blue)' }}>TODAY:</strong><p style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.5 }}>{u.planned_today}</p></div>}
+              {u.blockers && u.blockers.toLowerCase() !== 'none' && <div><strong style={{ fontSize: '12px', color: 'var(--red)' }}>BLOCKERS:</strong><p style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.5 }}>{u.blockers}</p></div>}
+            </div>
+          ))}
+        </div>
+      )}
+    </AppLayout>
+  );
+}
