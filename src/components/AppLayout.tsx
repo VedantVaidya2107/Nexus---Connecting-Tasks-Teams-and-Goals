@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
+import AIAssistant from '@/components/AIAssistant';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -24,6 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="main-content">
         {children}
       </main>
+      <AIAssistant />
     </div>
   );
 }
