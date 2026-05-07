@@ -54,9 +54,11 @@ export default function AIAssistant() {
           data: data.data.data
         }]);
         setConversationId(data.data.conversationId);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: `❌ Server Error: ${data.details || data.error || 'Please try again later.'}`, timestamp: new Date() }]);
       }
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: '❌ Sorry, I hit a snag. Please try again later.', timestamp: new Date() }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: '❌ Sorry, I hit a snag. Please check your internet connection.', timestamp: new Date() }]);
     } finally {
       setIsLoading(false);
     }

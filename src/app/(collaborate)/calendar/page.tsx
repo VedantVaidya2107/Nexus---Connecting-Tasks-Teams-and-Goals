@@ -12,9 +12,10 @@ export default function CalendarPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
+  const [hoveredTask, setHoveredTask] = useState<{task: Task, x: number, y: number} | null>(null);
 
   const fetchTasks = useCallback(async () => {
-    const { data } = await supabase.from('tasks').select('*').not('due_date', 'is', null);
+    const { data } = await supabase.from('tasks').select('*, assignee:profiles!tasks_assignee_id_fkey(full_name)').not('due_date', 'is', null);
     if (data) setTasks(data as Task[]);
     setLoading(false);
   }, []);
@@ -74,7 +75,16 @@ export default function CalendarPage() {
             <div key={i} className={`calendar-cell ${!cell.isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}`}>
               <div className="day-number">{cell.day}</div>
               {dayTasks.slice(0, 3).map(t => (
-                <div key={t.id} className="calendar-event" style={{ background: TASK_PRIORITY_CONFIG[t.priority].bg, color: TASK_PRIORITY_CONFIG[t.priority].color }}>
+                <div 
+                  key={t.id} 
+                  className="calendar-event" 
+                  style={{ background: TASK_PRIORITY_CONFIG[t.priority].bg, color: TASK_PRIORITY_CONFIG[t.priority].color }}
+                  onMouseEnter={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoveredTask({ task: t, x: rect.left, y: rect.top - 8 });
+                  }}
+                  onMouseLeave={() => setHoveredTask(null)}
+                >
                   {t.title}
                 </div>
               ))}
@@ -83,6 +93,36 @@ export default function CalendarPage() {
           );
         })}
       </div>
+
+      {/* Custom Floating Tooltip */}
+      {hoveredTask && (
+        <div 
+          style={{
+            position: 'fixed',
+            left: hoveredTask.x,
+            top: hoveredTask.y,
+            transform: 'translateY(-100%)',
+            background: 'rgba(20, 20, 30, 0.95)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid var(--border)',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+            zIndex: 9999,
+            pointerEvents: 'none',
+            minWidth: '220px',
+            color: 'white'
+          }}
+        >
+          <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '6px' }}>{hoveredTask.task.title}</div>
+          <div style={{ fontSize: '12px', color: '#a1a1aa', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ background: '#3f3f46', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>
+              {(hoveredTask.task.assignee as any)?.full_name?.[0] || '?'}
+            </span>
+            {(hoveredTask.task.assignee as any)?.full_name || 'Unassigned'}
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }

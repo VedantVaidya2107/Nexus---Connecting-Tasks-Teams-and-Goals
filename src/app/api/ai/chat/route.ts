@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { processUserQuery } from '@/lib/ai/gemini';
 
 export async function POST(req: NextRequest) {
   try {
     const cookieStore = cookies();
-    const supabase = createClient(
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -25,33 +25,36 @@ export async function POST(req: NextRequest) {
     // 1. Get or create conversation
     let currentConvId = conversationId;
     if (!currentConvId) {
-      const { data: conv } = await supabase
+      const { data: conv, error: convError } = await supabase
         .from('ai_conversations')
         .insert({ user_id: user.id })
         .select()
         .single();
+      if (convError) throw new Error(`Conversation creation failed: ${convError.message}`);
       currentConvId = conv?.id;
     }
 
-    // 2. Fetch history
-    const { data: history } = await supabase
+    // 2. Fetch recent history for context
+    const { data: history, error: historyError } = await supabase
       .from('ai_messages')
       .select('role, content')
       .eq('conversation_id', currentConvId)
       .order('created_at', { ascending: true })
       .limit(10);
+    if (historyError) throw new Error(`History fetch failed: ${historyError.message}`);
 
     // 3. Save user message
-    await supabase.from('ai_messages').insert({
+    const { error: msgError } = await supabase.from('ai_messages').insert({
       conversation_id: currentConvId,
       role: 'user',
       content: message
     });
+    if (msgError) throw new Error(`Message save failed: ${msgError.message}`);
 
     // 4. Process with Gemini
     const aiResponse = await processUserQuery(message, user.id, history || []);
 
-    // 5. Save AI message
+    // 5. Save AI response
     await supabase.from('ai_messages').insert({
       conversation_id: currentConvId,
       role: 'assistant',
@@ -71,6 +74,6 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('AI Chat Error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
   }
 }

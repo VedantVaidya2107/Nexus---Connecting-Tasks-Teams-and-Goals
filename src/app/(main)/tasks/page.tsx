@@ -12,7 +12,7 @@ import { createTask, updateTaskStatus, updateTask } from '@/actions/tasks';
 const STATUSES: TaskStatus[] = ['pending', 'in_progress', 'awaiting_zoho', 'awaiting_client', 'awaiting_team', 'done', 'cancelled'];
 
 export default function TasksPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -39,13 +39,20 @@ export default function TasksPage() {
     const [tRes, pRes, prRes] = await Promise.all([
       supabase.from('tasks').select('*, assignee:profiles!tasks_assignee_id_fkey(*)').order('sort_order'),
       supabase.from('profiles').select('*').eq('is_active', true),
-      supabase.from('projects').select('*, project_members!inner(user_id)').eq('status', 'active'),
+      supabase.from('projects').select('*').eq('status', 'active'),
     ]);
-    if (tRes.data) setTasks(tRes.data as Task[]);
+    if (tRes.data) {
+      let fetchedTasks = tRes.data as Task[];
+      if (profile?.role === 'team_member') {
+        // Hide tasks explicitly assigned to other people
+        fetchedTasks = fetchedTasks.filter(t => !t.assignee_id || t.assignee_id === user?.id);
+      }
+      setTasks(fetchedTasks);
+    }
     if (pRes.data) setProfiles(pRes.data as Profile[]);
     if (prRes.data) setProjects(prRes.data as unknown as Project[]);
     setLoading(false);
-  }, []);
+  }, [profile?.role, user?.id]);
 
   useEffect(() => { 
     fetchAll(); 
@@ -118,6 +125,10 @@ export default function TasksPage() {
   };
 
   const deleteTask = async (id: string) => {
+    if (profile?.role === 'team_member') {
+      toast.error('Team members cannot delete tasks.');
+      return;
+    }
     if (!confirm('Delete this task?')) return;
     await supabase.from('tasks').delete().eq('id', id);
     toast.success('Task deleted');
@@ -291,7 +302,9 @@ export default function TasksPage() {
                   </td>
                   <td>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(t)}>✏️</button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => deleteTask(t.id)}>🗑️</button>
+                    {profile?.role !== 'team_member' && (
+                      <button className="btn btn-ghost btn-sm" onClick={() => deleteTask(t.id)}>🗑️</button>
+                    )}
                   </td>
                 </tr>
               ))}

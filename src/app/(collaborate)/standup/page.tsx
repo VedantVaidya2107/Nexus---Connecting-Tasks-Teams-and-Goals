@@ -4,13 +4,14 @@ import React, { useEffect, useState, useCallback } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import type { DailyUpdate, Profile } from '@/lib/types';
+import type { DailyUpdate, Profile, Task } from '@/lib/types';
 import toast from 'react-hot-toast';
 
 export default function StandupPage() {
   const { user } = useAuth();
   const [updates, setUpdates] = useState<(DailyUpdate & { user?: Profile })[]>([]);
   const [myUpdate, setMyUpdate] = useState<DailyUpdate | null>(null);
+  const [myTasks, setMyTasks] = useState<Task[]>([]);
   const [yesterday, setYesterday] = useState('');
   const [today, setToday] = useState('');
   const [blockers, setBlockers] = useState('');
@@ -19,9 +20,10 @@ export default function StandupPage() {
   const todayStr = new Date().toISOString().split('T')[0];
 
   const fetchData = useCallback(async () => {
-    const [allRes, myRes] = await Promise.all([
+    const [allRes, myRes, tasksRes] = await Promise.all([
       supabase.from('daily_updates').select('*, user:profiles(*)').eq('date', todayStr).order('created_at'),
       user ? supabase.from('daily_updates').select('*').eq('user_id', user.id).eq('date', todayStr).maybeSingle() : Promise.resolve({ data: null }),
+      user ? supabase.from('tasks').select('*').eq('assignee_id', user.id).in('status', ['pending', 'in_progress', 'awaiting_zoho', 'awaiting_client', 'awaiting_team']) : Promise.resolve({ data: null }),
     ]);
     if (allRes.data) setUpdates(allRes.data as (DailyUpdate & { user?: Profile })[]);
     if (myRes.data) {
@@ -29,6 +31,9 @@ export default function StandupPage() {
       setYesterday((myRes.data as DailyUpdate).completed_yesterday || '');
       setToday((myRes.data as DailyUpdate).planned_today || '');
       setBlockers((myRes.data as DailyUpdate).blockers || '');
+    }
+    if (tasksRes.data) {
+      setMyTasks(tasksRes.data as Task[]);
     }
     setLoading(false);
   }, [user, todayStr]);
@@ -61,6 +66,21 @@ export default function StandupPage() {
         </div>
         <div className="form-group">
           <label className="form-label">🎯 What are you working on today?</label>
+          {myTasks.length > 0 && (
+            <div style={{ marginBottom: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>Suggested from your pending tasks:</span>
+              {myTasks.map(t => (
+                <button 
+                  key={t.id} 
+                  onClick={() => setToday(prev => prev ? `${prev}\n- ${t.title}` : `- ${t.title}`)}
+                  className="btn-ghost btn-sm" 
+                  style={{ padding: '2px 8px', fontSize: '11px', background: 'var(--bg-hover)', border: '1px dashed var(--border)' }}
+                >
+                  + {t.title}
+                </button>
+              ))}
+            </div>
+          )}
           <textarea className="form-textarea" value={today} onChange={e => setToday(e.target.value)} placeholder="List your plans..." style={{ minHeight: '80px' }} />
         </div>
         <div className="form-group">
