@@ -8,7 +8,7 @@ import type { DailyUpdate, Profile, Task } from '@/lib/types';
 import toast from 'react-hot-toast';
 
 export default function StandupPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [updates, setUpdates] = useState<(DailyUpdate & { user?: Profile })[]>([]);
   const [myUpdate, setMyUpdate] = useState<DailyUpdate | null>(null);
   const [myTasks, setMyTasks] = useState<Task[]>([]);
@@ -20,8 +20,17 @@ export default function StandupPage() {
   const todayStr = new Date().toISOString().split('T')[0];
 
   const fetchData = useCallback(async () => {
+    if (!profile) return;
+
+    let updatesQuery = supabase.from('daily_updates').select('*, user:profiles(*)').eq('date', todayStr).order('created_at');
+    
+    // Privacy: Members only see their own updates
+    if (profile.role === 'team_member') {
+      updatesQuery = updatesQuery.eq('user_id', user?.id);
+    }
+
     const [allRes, myRes, tasksRes] = await Promise.all([
-      supabase.from('daily_updates').select('*, user:profiles(*)').eq('date', todayStr).order('created_at'),
+      updatesQuery,
       user ? supabase.from('daily_updates').select('*').eq('user_id', user.id).eq('date', todayStr).maybeSingle() : Promise.resolve({ data: null }),
       user ? supabase.from('tasks').select('*').eq('assignee_id', user.id).in('status', ['pending', 'in_progress', 'awaiting_zoho', 'awaiting_client', 'awaiting_team']) : Promise.resolve({ data: null }),
     ]);
@@ -36,9 +45,11 @@ export default function StandupPage() {
       setMyTasks(tasksRes.data as Task[]);
     }
     setLoading(false);
-  }, [user, todayStr]);
+  }, [user, profile, todayStr]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { 
+    if (profile) fetchData(); 
+  }, [fetchData, profile]);
 
   const saveUpdate = async () => {
     const payload = { user_id: user!.id, date: todayStr, completed_yesterday: yesterday, planned_today: today, blockers };

@@ -26,8 +26,15 @@ export default function ProjectsPage() {
   const [teamIds, setTeamIds] = useState<string[]>([]);
 
   const fetchData = useCallback(async () => {
+    let pQuery = supabase.from('projects').select('*, owner:profiles(*)').order('created_at', { ascending: false });
+    
+    // Privacy: Members only see projects they belong to
+    if (profile?.role === 'team_member') {
+      pQuery = pQuery.contains('team_ids', [user?.id]);
+    }
+
     const [pRes, tRes, uRes] = await Promise.all([
-      supabase.from('projects').select('*, owner:profiles(*)').order('created_at', { ascending: false }),
+      pQuery,
       supabase.from('tasks').select('id, project_id, status'),
       supabase.from('profiles').select('*').eq('is_active', true).order('full_name'),
     ]);
@@ -35,7 +42,7 @@ export default function ProjectsPage() {
     if (tRes.data) setTasks(tRes.data as Task[]);
     if (uRes.data) setAllUsers(uRes.data as Profile[]);
     setLoading(false);
-  }, []);
+  }, [profile, user]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

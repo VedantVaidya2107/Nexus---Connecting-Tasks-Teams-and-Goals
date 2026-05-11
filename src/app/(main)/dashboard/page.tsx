@@ -13,6 +13,17 @@ import {
   Tooltip, Legend, Filler,
 } from 'chart.js';
 import { Doughnut, Bar, Line } from 'react-chartjs-2';
+import { 
+  Layout, 
+  Clock, 
+  RefreshCw, 
+  Building2, 
+  User, 
+  Users, 
+  CheckCircle2, 
+  XCircle, 
+  TrendingUp 
+} from 'lucide-react';
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Tooltip, Legend, Filler);
 
@@ -36,18 +47,30 @@ export default function DashboardPage() {
   const [filterEndDate, setFilterEndDate] = useState<string>('');
 
   const fetchData = useCallback(async () => {
+    if (!profile) return;
+    
+    let tasksQuery = supabase.from('tasks').select('*, assignee:profiles!tasks_assignee_id_fkey(*)');
+    
+    // Privacy: Members only see their own tasks
+    if (profile.role === 'team_member') {
+      tasksQuery = tasksQuery.eq('assignee_id', profile.id);
+    }
+
     const [tasksRes, actRes, membersRes] = await Promise.all([
-      supabase.from('tasks').select('*, assignee:profiles!tasks_assignee_id_fkey(*)'),
+      tasksQuery,
       supabase.from('activity_log').select('*, user:profiles(*)').order('created_at', { ascending: false }).limit(15),
       supabase.from('profiles').select('*').eq('is_active', true),
     ]);
+    
     if (tasksRes.data) setTasks(tasksRes.data as Task[]);
     if (actRes.data) setActivities(actRes.data as (ActivityLog & { user?: Profile })[]);
     if (membersRes.data) setMembers(membersRes.data as Profile[]);
     setLoading(false);
-  }, []);
+  }, [profile]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { 
+    if (profile) fetchData(); 
+  }, [fetchData, profile]);
 
   const filteredTasks = tasks.filter(t => {
     const userMatch = filterUser === 'all' || t.assignee_id === filterUser;
@@ -89,14 +112,14 @@ export default function DashboardPage() {
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   const kpis = [
-    { label: 'Total Tasks', value: total, icon: '📋', color: 'var(--blue)', href: '/tasks' },
-    { label: 'Pending', value: statusCounts['pending'] || 0, icon: '⏳', color: 'var(--slate)', href: '/tasks?status=pending' },
-    { label: 'In Progress', value: statusCounts['in_progress'] || 0, icon: '🔄', color: 'var(--cyan)', href: '/tasks?status=in_progress' },
-    { label: 'Awaiting from Zoho', value: statusCounts['awaiting_zoho'] || 0, icon: '🏢', color: 'var(--amber)', href: '/tasks?status=awaiting_zoho' },
-    { label: 'Awaiting from Client', value: statusCounts['awaiting_client'] || 0, icon: '👤', color: 'var(--amber)', href: '/tasks?status=awaiting_client' },
-    { label: 'Awaiting from Team Member', value: statusCounts['awaiting_team'] || 0, icon: '👥', color: 'var(--amber)', href: '/tasks?status=awaiting_team' },
-    { label: 'Done', value: completed, icon: '✅', color: 'var(--green)', href: '/tasks?status=done' },
-    { label: 'Cancelled', value: statusCounts['cancelled'] || 0, icon: '🚫', color: 'var(--red)', href: '/tasks?status=cancelled' },
+    { label: 'Total Tasks', value: total, icon: Layout, color: 'var(--blue)', href: '/tasks', trend: 'Global Overview' },
+    { label: 'Pending', value: statusCounts['pending'] || 0, icon: Clock, color: 'var(--slate)', href: '/tasks?status=pending', trend: `${total > 0 ? Math.round((statusCounts['pending'] / total) * 100) : 0}% of Total` },
+    { label: 'In Progress', value: statusCounts['in_progress'] || 0, icon: RefreshCw, color: 'var(--cyan)', href: '/tasks?status=in_progress', trend: 'Active Sprint' },
+    { label: 'Awaiting Zoho', value: statusCounts['awaiting_zoho'] || 0, icon: Building2, color: 'var(--amber)', href: '/tasks?status=awaiting_zoho', trend: 'External Dependency' },
+    { label: 'Awaiting Client', value: statusCounts['awaiting_client'] || 0, icon: User, color: 'var(--amber)', href: '/tasks?status=awaiting_client', trend: 'Awaiting Feedback' },
+    { label: 'Awaiting Team', value: statusCounts['awaiting_team'] || 0, icon: Users, color: 'var(--amber)', href: '/tasks?status=awaiting_team', trend: 'Internal Review' },
+    { label: 'Done', value: completed, icon: CheckCircle2, color: 'var(--green)', href: '/tasks?status=done', trend: `${completionRate}% Success Rate` },
+    { label: 'Cancelled', value: statusCounts['cancelled'] || 0, icon: XCircle, color: 'var(--red)', href: '/tasks?status=cancelled', trend: 'Deprioritized' },
   ];
 
   const statusChartData = {
@@ -168,11 +191,18 @@ export default function DashboardPage() {
     link.click();
   };
 
-  if (loading) return <AppLayout><div className="loading-page"><div className="spinner" /></div></AppLayout>;
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="loading-page">
+          <div className="spinner" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
-      {/* Removed duplicate page header */}
       <div className="page-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', justifyContent: 'flex-end' }}>
         <select 
           className="form-select" 
@@ -188,29 +218,15 @@ export default function DashboardPage() {
         </select>
         {filterTime === 'custom' && (
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <input 
-              type="date" 
-              className="form-select" 
-              style={{ width: 'auto', padding: '7px 12px', fontSize: '13px' }}
-              value={filterStartDate}
-              onChange={e => setFilterStartDate(e.target.value)}
-              title="Start Date"
-            />
-            <span style={{ color: '#94a3b8', fontSize: '13px' }}>-</span>
-            <input 
-              type="date" 
-              className="form-select" 
-              style={{ width: 'auto', padding: '7px 12px', fontSize: '13px' }}
-              value={filterEndDate}
-              onChange={e => setFilterEndDate(e.target.value)}
-              title="End Date"
-            />
+            <input type="date" className="form-input" style={{ width: 'auto', padding: '6px 10px', fontSize: '12px' }} value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} />
+            <span style={{ color: 'var(--text-muted)' }}>to</span>
+            <input type="date" className="form-input" style={{ width: 'auto', padding: '6px 10px', fontSize: '12px' }} value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} />
           </div>
         )}
         {profile?.role === 'admin' && (
           <select 
             className="form-select" 
-            style={{ width: 'auto', padding: '8px 12px', fontSize: '13px', minWidth: '180px' }}
+            style={{ width: 'auto', padding: '8px 12px', fontSize: '13px', minWidth: '160px' }}
             value={filterUser}
             onChange={e => setFilterUser(e.target.value)}
           >
@@ -228,30 +244,90 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* KPI Cards */}
       <div className="kpi-grid">
-        {kpis.map(kpi => (
-          <div 
-            key={kpi.label} 
-            className="glass-card kpi-card anim-stagger" 
-            style={{ cursor: kpi.value > 0 ? 'pointer' : 'default' }}
-            onClick={() => kpi.value > 0 && (window.location.href = kpi.href)}
-            onMouseEnter={e => kpi.value > 0 && (e.currentTarget.style.transform = 'translateY(-4px)')}
-            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            <div className="kpi-icon" style={{ background: kpi.color + '20', color: kpi.color }}>{kpi.icon}</div>
-            <div className="kpi-label">{kpi.label}</div>
-            <div className="kpi-value">{kpi.value}</div>
-            {kpi.change && (
-              <div className={`kpi-change ${kpi.positive ? 'positive' : 'negative'}`}>
-                {kpi.positive ? '↑' : '↓'} {kpi.change}
+        {kpis.map((kpi, idx) => {
+          const Icon = kpi.icon;
+          const kpiColor = kpi.color;
+          return (
+            <div 
+              key={kpi.label} 
+              className="glass-card kpi-card anim-stagger" 
+              style={{ 
+                cursor: kpi.value > 0 ? 'pointer' : 'default',
+                animationDelay: `${idx * 0.05}s`,
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+              onClick={() => kpi.value > 0 && (window.location.href = kpi.href)}
+              onMouseEnter={(e) => {
+                if (kpi.value > 0) {
+                  const target = e.currentTarget;
+                  target.style.transform = 'translateY(-10px) scale(1.02)';
+                  target.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                  target.style.boxShadow = '0 20px 40px -15px rgba(0,0,0,0.5)';
+                  const hint = target.querySelector('.kpi-hint') as HTMLElement;
+                  if (hint) { hint.style.opacity = '1'; hint.style.transform = 'translateY(0)'; }
+                  const watermark = target.querySelector('.kpi-watermark') as HTMLElement;
+                  if (watermark) { watermark.style.opacity = '0.25'; watermark.style.transform = 'rotate(0deg) scale(1.1)'; }
+                }
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget;
+                target.style.transform = 'translateY(0) scale(1)';
+                target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                target.style.boxShadow = '0 10px 30px rgba(0,0,0,0.3)';
+                const hint = target.querySelector('.kpi-hint') as HTMLElement;
+                if (hint) { hint.style.opacity = '0'; hint.style.transform = 'translateY(10px)'; }
+                const watermark = target.querySelector('.kpi-watermark') as HTMLElement;
+                if (watermark) { watermark.style.opacity = '0.15'; watermark.style.transform = 'rotate(15deg) scale(1)'; }
+              }}
+            >
+              <div 
+                className="kpi-watermark"
+                style={{ 
+                  position: 'absolute', top: '-10px', right: '-10px', opacity: 0.15, zIndex: 0,
+                  transform: 'rotate(15deg)', transition: 'all 0.5s ease', color: kpiColor
+                }} 
+              >
+                <Icon size={110} />
               </div>
-            )}
-          </div>
-        ))}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', position: 'relative', zIndex: 1, marginBottom: '24px' }}>
+                <div style={{ 
+                  background: 'rgba(255,255,255,0.1)', color: '#fff', 
+                  width: '52px', height: '52px', borderRadius: '16px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <Icon size={26} strokeWidth={2.5} />
+                </div>
+                <div style={{ fontSize: '10px', fontWeight: 900, color: kpiColor, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                  {kpi.trend}
+                </div>
+              </div>
+
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <div className="kpi-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{kpi.label}</div>
+                <div className="kpi-value" style={{ fontSize: '36px', fontWeight: 900, margin: '8px 0', color: 'var(--text-primary)' }}>{kpi.value}</div>
+              </div>
+
+              <div className="kpi-hint" style={{ 
+                marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', 
+                opacity: 0, transform: 'translateY(10px)', transition: 'all 0.3s ease'
+              }}>
+                <div style={{ padding: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}>
+                  <TrendingUp size={14} />
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                  View Details
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Charts */}
       <div className="charts-grid">
         <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.1s' }}>
           <h3>Task Status Distribution</h3>
@@ -269,50 +345,44 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.3s' }}>
-          <h3>Completion Trend (7 days)</h3>
+        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.3s', gridColumn: 'span 2' }}>
+          <h3>Task Completion Trend (Last 7 Days)</h3>
           <div className="chart-container">
             <Line data={trendData} options={{ ...chartDefaults, responsive: true, maintainAspectRatio: false }} />
           </div>
         </div>
-
-        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.4s' }}>
-          <h3>Team Performance</h3>
-          <div className="chart-container">
-            <Bar data={teamChartData} options={{ ...chartDefaults, responsive: true, maintainAspectRatio: false }} />
-          </div>
-        </div>
       </div>
 
-      {/* Bottom Section: Activity + Overdue */}
-      <div className="charts-grid">
-        {profile?.role === 'admin' && (
-          <div className="glass-card chart-card">
-            <h3>Recent Activity</h3>
-            {activities.length === 0 ? (
-              <div className="empty-state"><div className="empty-icon">📭</div><h3>No activity yet</h3><p>Actions will appear here as your team works.</p></div>
-            ) : (
-              <ul className="activity-feed">
-                {activities.map(a => (
-                  <li key={a.id} className="activity-item">
-                    <div className="user-avatar" style={{ width: 32, height: 32, fontSize: 12, flexShrink: 0 }}>
-                      {a.user?.full_name?.[0] || '?'}
-                    </div>
-                    <div>
-                      <div className="activity-text"><strong>{a.user?.full_name || 'Someone'}</strong> {a.action} {a.entity_name && <em>{a.entity_name}</em>}</div>
-                      <div className="activity-time">{new Date(a.created_at).toLocaleString()}</div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+      <div className="charts-grid" style={{ gridTemplateColumns: '2fr 1fr' }}>
+        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.4s' }}>
+          <h3>Recent Team Activity</h3>
+          <ul className="activity-feed">
+            {activities.length > 0 ? activities.map(act => (
+              <li key={act.id} className="activity-item">
+                <div className="user-avatar" style={{ width: '32px', height: '32px', fontSize: '12px' }}>
+                  {act.user?.full_name?.charAt(0) || '?'}
+                </div>
+                <div className="activity-content">
+                  <div className="activity-text">
+                    <strong>{act.user?.full_name || 'System'}</strong> {act.action}
+                  </div>
+                  <div className="activity-time">{new Date(act.created_at).toLocaleString()}</div>
+                </div>
+              </li>
+            )) : <li className="empty-state">No recent activity</li>}
+          </ul>
+        </div>
 
-        <div className="glass-card chart-card">
-          <h3>Overdue Tasks</h3>
+        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.5s' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0 }}>Critical Overdue</h3>
+            <span className="badge" style={{ background: 'var(--red)', color: 'white' }}>{overdue}</span>
+          </div>
           {overdue === 0 ? (
-            <div className="empty-state"><div className="empty-icon">🎉</div><h3>All on track!</h3><p>No overdue tasks at the moment.</p></div>
+            <div className="empty-state" style={{ padding: '20px 0' }}>
+              <div style={{ fontSize: '32px', marginBottom: '12px' }}>✅</div>
+              <p>All critical tasks are on track</p>
+            </div>
           ) : (
             <table className="data-table">
               <thead>

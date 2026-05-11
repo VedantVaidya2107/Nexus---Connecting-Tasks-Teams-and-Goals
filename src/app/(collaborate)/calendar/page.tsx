@@ -3,24 +3,36 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { TASK_PRIORITY_CONFIG } from '@/lib/types';
 import type { Task } from '@/lib/types';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function CalendarPage() {
+  const { profile } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [hoveredTask, setHoveredTask] = useState<{task: Task, x: number, y: number} | null>(null);
 
   const fetchTasks = useCallback(async () => {
-    const { data } = await supabase.from('tasks').select('*, assignee:profiles!tasks_assignee_id_fkey(full_name)').not('due_date', 'is', null);
+    if (!profile) return;
+    
+    let query = supabase.from('tasks').select('*, assignee:profiles!tasks_assignee_id_fkey(full_name)').not('due_date', 'is', null);
+    
+    if (profile.role === 'team_member') {
+      query = query.eq('assignee_id', profile.id);
+    }
+
+    const { data } = await query;
     if (data) setTasks(data as Task[]);
     setLoading(false);
-  }, []);
+  }, [profile]);
 
-  useEffect(() => { fetchTasks(); }, [fetchTasks]);
+  useEffect(() => { 
+    if (profile) fetchTasks(); 
+  }, [fetchTasks, profile]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();

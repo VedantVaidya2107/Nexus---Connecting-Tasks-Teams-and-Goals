@@ -45,21 +45,35 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
-        {NAV_ITEMS.filter(s => s.section !== 'Admin' || profile?.role === 'admin').map(section => (
-          <div key={section.section} className="nav-section">
-            <div className="nav-section-label">{section.section}</div>
-            {section.items.map(item => (
-              <button
-                key={item.href}
-                className={`nav-item ${pathname === item.href ? 'active' : ''}`}
-                onClick={() => router.push(item.href)}
-              >
-                <span>{item.icon}</span>
-                {item.label}
-              </button>
-            ))}
-          </div>
-        ))}
+        {NAV_ITEMS
+          .filter(s => s.section !== 'Admin' || profile?.role === 'admin')
+          .map(section => {
+            const filteredItems = section.items.filter(item => {
+              // Members cannot see global lists or reports
+              if (profile?.role === 'team_member') {
+                if (item.label === 'All Tasks' || item.label === 'Reports') return false;
+              }
+              return true;
+            });
+
+            if (filteredItems.length === 0) return null;
+
+            return (
+              <div key={section.section} className="nav-section">
+                <div className="nav-section-label">{section.section}</div>
+                {filteredItems.map(item => (
+                  <button
+                    key={item.href}
+                    className={`nav-item ${pathname === item.href ? 'active' : ''}`}
+                    onClick={() => router.push(item.href)}
+                  >
+                    <span>{item.icon}</span>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
       </nav>
 
       <div className="sidebar-footer">

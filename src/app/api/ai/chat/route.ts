@@ -66,18 +66,21 @@ export async function POST(req: NextRequest) {
 
     // 5. Execute Actions if any
     if (aiResponse.action === 'create_task' && aiResponse.data) {
-      const { title, project_id, priority, due_date } = aiResponse.data;
+      const { title, project_id, priority, due_date, assignee_id } = aiResponse.data;
       await supabaseAdmin.from('tasks').insert({
         title,
         project_id,
         priority: priority || 'medium',
         due_date,
-        assignee_id: user.id,
+        assignee_id: assignee_id || user.id,
         status: 'pending'
       });
     } else if (aiResponse.action === 'update_task_status' && aiResponse.data) {
       const { task_id, status } = aiResponse.data;
       await supabaseAdmin.from('tasks').update({ status }).eq('id', task_id);
+    } else if (aiResponse.action === 'assign_task' && aiResponse.data) {
+      const { task_id, assignee_id } = aiResponse.data;
+      await supabaseAdmin.from('tasks').update({ assignee_id }).eq('id', task_id);
     }
 
     // 6. Save AI response
