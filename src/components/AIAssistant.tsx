@@ -5,7 +5,7 @@ import { Send, Sparkles, X, Minimize2, Maximize2, Bot } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function AIAssistant() {
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
@@ -40,7 +40,10 @@ export default function AIAssistant() {
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        },
         body: JSON.stringify({ message: userText, conversationId })
       });
 

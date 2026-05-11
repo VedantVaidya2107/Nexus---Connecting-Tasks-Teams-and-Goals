@@ -140,32 +140,27 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
-      <div className="page-header">
-        <div>
-          <h1>Dashboard</h1>
-          <div className="subtitle">Overview of your workspace</div>
-        </div>
-        <div className="page-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          {profile?.role === 'admin' && (
-            <select 
-              className="form-select" 
-              style={{ width: 'auto', padding: '8px 12px', fontSize: '13px', minWidth: '180px' }}
-              value={filterUser}
-              onChange={e => setFilterUser(e.target.value)}
-            >
-              <option value="all">All Team Members</option>
-              {members.map(m => (
-                <option key={m.id} value={m.id}>{m.full_name}</option>
-              ))}
-            </select>
-          )}
-          <button className="btn btn-secondary" onClick={exportData} title="Export overall data">
-            📥 Export
-          </button>
-          <button className="btn btn-primary" onClick={() => window.location.href = '/tasks'}>
-            ＋ New Task
-          </button>
-        </div>
+      {/* Removed duplicate page header */}
+      <div className="page-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', justifyContent: 'flex-end' }}>
+        {profile?.role === 'admin' && (
+          <select 
+            className="form-select" 
+            style={{ width: 'auto', padding: '8px 12px', fontSize: '13px', minWidth: '180px' }}
+            value={filterUser}
+            onChange={e => setFilterUser(e.target.value)}
+          >
+            <option value="all">All Team Members</option>
+            {members.map(m => (
+              <option key={m.id} value={m.id}>{m.full_name}</option>
+            ))}
+          </select>
+        )}
+        <button className="btn btn-secondary" onClick={exportData} title="Export overall data">
+          📥 Export
+        </button>
+        <button className="btn btn-primary" onClick={() => window.location.href = '/tasks'}>
+          ＋ New Task
+        </button>
       </div>
 
       {/* KPI Cards */}
@@ -173,8 +168,8 @@ export default function DashboardPage() {
         {kpis.map(kpi => (
           <div 
             key={kpi.label} 
-            className="glass-card kpi-card" 
-            style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
+            className="glass-card kpi-card anim-stagger" 
+            style={{ cursor: 'pointer' }}
             onClick={() => window.location.href = kpi.href}
             onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
             onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
@@ -193,7 +188,7 @@ export default function DashboardPage() {
 
       {/* Charts */}
       <div className="charts-grid">
-        <div className="glass-card chart-card">
+        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.1s' }}>
           <h3>Task Status Distribution</h3>
           <div className="chart-container" style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{ width: '240px', height: '240px' }}>
@@ -202,21 +197,21 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="glass-card chart-card">
+        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.2s' }}>
           <h3>Tasks by Priority</h3>
           <div className="chart-container">
             <Bar data={priorityChartData} options={{ ...chartDefaults, responsive: true, maintainAspectRatio: false, indexAxis: 'y' as const }} />
           </div>
         </div>
 
-        <div className="glass-card chart-card">
+        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.3s' }}>
           <h3>Completion Trend (7 days)</h3>
           <div className="chart-container">
             <Line data={trendData} options={{ ...chartDefaults, responsive: true, maintainAspectRatio: false }} />
           </div>
         </div>
 
-        <div className="glass-card chart-card">
+        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.4s' }}>
           <h3>Team Performance</h3>
           <div className="chart-container">
             <Bar data={teamChartData} options={{ ...chartDefaults, responsive: true, maintainAspectRatio: false }} />

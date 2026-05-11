@@ -39,6 +39,7 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
+      <div className="auth-orb-3" />
       <div className="auth-card glass-card">
         <div className="logo-area">
           <div className="logo-box">N</div>
