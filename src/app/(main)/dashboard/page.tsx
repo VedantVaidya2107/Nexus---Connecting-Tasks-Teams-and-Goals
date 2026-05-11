@@ -31,6 +31,9 @@ export default function DashboardPage() {
   const [members, setMembers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterUser, setFilterUser] = useState<string>('all');
+  const [filterTime, setFilterTime] = useState<string>('all');
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
 
   const fetchData = useCallback(async () => {
     const [tasksRes, actRes, membersRes] = await Promise.all([
@@ -46,7 +49,36 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const filteredTasks = tasks.filter(t => filterUser === 'all' || t.assignee_id === filterUser);
+  const filteredTasks = tasks.filter(t => {
+    const userMatch = filterUser === 'all' || t.assignee_id === filterUser;
+    let timeMatch = true;
+    if (filterTime !== 'all') {
+      const taskDate = new Date(t.created_at);
+      const now = new Date();
+      if (filterTime === 'today') {
+        timeMatch = taskDate.toDateString() === now.toDateString();
+      } else if (filterTime === 'this_week') {
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        timeMatch = taskDate >= startOfWeek;
+      } else if (filterTime === 'this_month') {
+        timeMatch = taskDate.getMonth() === now.getMonth() && taskDate.getFullYear() === now.getFullYear();
+      } else if (filterTime === 'custom') {
+        if (filterStartDate) {
+          const start = new Date(filterStartDate);
+          start.setHours(0, 0, 0, 0);
+          if (taskDate < start) timeMatch = false;
+        }
+        if (filterEndDate && timeMatch) {
+          const end = new Date(filterEndDate);
+          end.setHours(23, 59, 59, 999);
+          if (taskDate > end) timeMatch = false;
+        }
+      }
+    }
+    return userMatch && timeMatch;
+  });
 
   const statusCounts = Object.fromEntries(
     Object.keys(TASK_STATUS_CONFIG).map(s => [s, filteredTasks.filter(t => t.status === s).length])
@@ -142,6 +174,39 @@ export default function DashboardPage() {
     <AppLayout>
       {/* Removed duplicate page header */}
       <div className="page-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', justifyContent: 'flex-end' }}>
+        <select 
+          className="form-select" 
+          style={{ width: 'auto', padding: '8px 12px', fontSize: '13px', minWidth: '140px' }}
+          value={filterTime}
+          onChange={e => setFilterTime(e.target.value)}
+        >
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="this_week">This Week</option>
+          <option value="this_month">This Month</option>
+          <option value="custom">Custom Range</option>
+        </select>
+        {filterTime === 'custom' && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input 
+              type="date" 
+              className="form-select" 
+              style={{ width: 'auto', padding: '7px 12px', fontSize: '13px' }}
+              value={filterStartDate}
+              onChange={e => setFilterStartDate(e.target.value)}
+              title="Start Date"
+            />
+            <span style={{ color: '#94a3b8', fontSize: '13px' }}>-</span>
+            <input 
+              type="date" 
+              className="form-select" 
+              style={{ width: 'auto', padding: '7px 12px', fontSize: '13px' }}
+              value={filterEndDate}
+              onChange={e => setFilterEndDate(e.target.value)}
+              title="End Date"
+            />
+          </div>
+        )}
         {profile?.role === 'admin' && (
           <select 
             className="form-select" 

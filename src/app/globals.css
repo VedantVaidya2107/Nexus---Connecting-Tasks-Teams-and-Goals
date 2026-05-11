@@ -1072,3 +1072,109 @@ input, textarea, select { font-family: inherit; color: inherit; }
     bottom: 16px; right: 16px;
   }
 }
+
+/* ============================================
+   Light Mode Overrides
+   ============================================ */
+:root.light-mode {
+  --bg-primary: #f1f5f9;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.9);
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --border: #e2e8f0;
+  --border-active: #8b5cf6;
+  
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  
+  --gradient-card: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --shadow-glow: 0 0 20px rgba(139, 92, 246, 0.1);
+}
+
+.light-mode body::before {
+  background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.05) 0%, transparent 60%),
+              radial-gradient(circle at 0% 100%, rgba(6, 182, 212, 0.05) 0%, transparent 60%);
+}
+
+.light-mode body::after {
+  display: none;
+}
+
+.light-mode .glass-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+}
+
+.light-mode .glass-card:hover {
+  box-shadow: var(--shadow-lg);
+  border-color: var(--accent);
+}
+
+.light-mode .sidebar {
+  background: #ffffff;
+  border-right: 1px solid var(--border);
+}
+
+.light-mode .sidebar-logo {
+  border-bottom: 1px solid var(--border);
+}
+
+.light-mode .nav-section-label {
+  color: #94a3b8;
+}
+
+.light-mode .nav-item {
+  color: #475569;
+}
+
+.light-mode .nav-item:hover {
+  background: #f8fafc;
+  color: var(--accent);
+}
+
+.light-mode .nav-item.active {
+  background: var(--gradient-accent);
+  color: #ffffff;
+}
+
+.light-mode .header {
+  background: rgba(255, 255, 255, 0.8);
+  border-bottom: 1px solid var(--border);
+}
+
+.light-mode .search-bar {
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+}
+
+.light-mode .search-bar input {
+  color: #0f172a;
+}
+
+.light-mode .form-input, 
+.light-mode .form-textarea, 
+.light-mode .form-select {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+}
+
+.light-mode .user-card:hover {
+  background: #f8fafc;
+}
+
+.light-mode .kanban-column {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+}
+
+.light-mode .kanban-column-header {
+  border-bottom: 1px solid var(--border);
+  background: #ffffff;
+}

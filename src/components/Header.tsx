@@ -15,6 +15,27 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifs, setShowNotifs] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+      setTheme('light');
+      document.documentElement.classList.add('light-mode');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    if (theme === 'dark') {
+      setTheme('light');
+      document.documentElement.classList.add('light-mode');
+      localStorage.setItem('theme', 'light');
+    } else {
+      setTheme('dark');
+      document.documentElement.classList.remove('light-mode');
+      localStorage.setItem('theme', 'dark');
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -51,6 +72,9 @@ export default function Header({ title, subtitle }: HeaderProps) {
             onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
+        <button className="icon-btn" onClick={toggleTheme} title="Toggle Theme">
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
         <button className="icon-btn" onClick={() => setShowNotifs(!showNotifs)}>
           🔔
           {notifications.length > 0 && <span className="dot" />}

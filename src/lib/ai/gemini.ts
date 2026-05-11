@@ -53,7 +53,7 @@ Always return a JSON object with:
 `;
 
     // 3. Call Gemini
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash' });
     const chat = model.startChat({
       history: history.map(m => ({
         role: m.role === 'user' ? 'user' : 'model',
