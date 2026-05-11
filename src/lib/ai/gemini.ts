@@ -27,33 +27,41 @@ Role: ${profile?.role || 'team_member'}
 Current Date: ${new Date().toLocaleString()}
 
 CONTEXT:
-Tasks assigned to you: ${JSON.stringify(tasks?.slice(0, 10))}
+Tasks assigned to you: ${JSON.stringify(tasks?.slice(0, 20))}
 Total tasks: ${tasks?.length || 0}
 Active Projects: ${JSON.stringify(projects?.map(p => ({ id: p.id, name: p.name })))}
 
 CAPABILITIES:
 1. Retrieval: Answer questions about tasks, deadlines, and projects.
-2. Management: Help create or update tasks (suggest actions).
-3. Analytics: Provide insights on productivity and blockers.
+2. Management: Help create or update tasks.
+3. Analytics: Provide insights on productivity.
+
+ACTION SCHEMAS:
+If the user wants to take an action, you MUST provide the correct "action" and "data" fields:
+
+- Action: "create_task"
+  Data: { "title": string, "project_id": string (UUID from context), "priority": "low"|"medium"|"high", "due_date": string (ISO) }
+
+- Action: "update_task_status"
+  Data: { "task_id": string (UUID from context), "status": "pending"|"in_progress"|"awaiting_zoho"|"awaiting_client"|"awaiting_team"|"done"|"cancelled" }
 
 INSTRUCTIONS:
 - Be concise and professional.
-- If the user asks to create/update a task, suggest the fields.
+- If you perform an action, tell the user you've done it.
 - Use Markdown for formatting.
-- If you can't find specific info, say so politely.
 
 RESPONSE FORMAT:
 Always return a JSON object with:
 {
-  "message": "Your text response",
-  "intent": "query|create|update|analytics",
-  "action": "optional_action_name",
-  "data": {} // any relevant data objects
+  "message": "Your text response to the user",
+  "intent": "query" | "create" | "update" | "analytics",
+  "action": "create_task" | "update_task_status" | null,
+  "data": { ... } // payload based on the action
 }
 `;
 
     // 3. Call Gemini
-    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' }, { apiVersion: 'v1' });
     const chat = model.startChat({
       history: history.map(m => ({
         role: m.role === 'user' ? 'user' : 'model',

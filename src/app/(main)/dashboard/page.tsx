@@ -234,9 +234,9 @@ export default function DashboardPage() {
           <div 
             key={kpi.label} 
             className="glass-card kpi-card anim-stagger" 
-            style={{ cursor: 'pointer' }}
-            onClick={() => window.location.href = kpi.href}
-            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
+            style={{ cursor: kpi.value > 0 ? 'pointer' : 'default' }}
+            onClick={() => kpi.value > 0 && (window.location.href = kpi.href)}
+            onMouseEnter={e => kpi.value > 0 && (e.currentTarget.style.transform = 'translateY(-4px)')}
             onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
           >
             <div className="kpi-icon" style={{ background: kpi.color + '20', color: kpi.color }}>{kpi.icon}</div>

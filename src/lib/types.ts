@@ -32,6 +32,7 @@ export interface Project {
   status: ProjectStatus;
   color: string;
   owner_id: string | null;
+  team_ids: string[] | null;
   created_at: string;
   updated_at: string;
   // Computed

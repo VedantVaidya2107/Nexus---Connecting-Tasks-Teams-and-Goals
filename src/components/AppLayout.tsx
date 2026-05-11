@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import AIAssistant from '@/components/AIAssistant';
+import DynamicBackground from '@/components/DynamicBackground';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -20,6 +21,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-layout">
+      <DynamicBackground />
       <Sidebar />
       <Header title="Dashboard" />
       <main className="main-content">

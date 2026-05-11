@@ -4,28 +4,29 @@ Nexus is a modern, high-performance project management web application designed 
 
 ## 🚀 Key Features
 
+- **AI Action Agent**: Integrated with **Gemini 2.5 Flash**, the AI can now directly execute database operations:
+  - **Create Tasks**: Simply ask the bot to create a task, and it will handle the database entry.
+  - **Update Status**: Change task statuses (e.g., "Set task X to Done") through natural language.
+  - **Reassign Tasks**: Hand off tasks to different team members via chat.
 - **Dynamic Dashboard**: Real-time overview of tasks, team performance, and activity logs.
-- **Advanced Admin Dashboard**: 
-  - **User-Specific Filtering**: Focus the entire dashboard on a single team member to track their specific progress.
-  - **KPI Analytics**: Instant metrics for 7 unique task statuses (Pending, In Progress, Awaiting Zoho/Client/Team, Done, Cancelled).
-- **Optimized Kanban Board**: High-density 4-column grid layout that eliminates horizontal scrolling and provides a clear birds-eye view of the entire project pipeline.
-- **Excel Data Export**: 📥 Export organization-wide data into Excel-compatible reports (UTF-8 BOM supported) with a single click from the Dashboard or Reports page.
-- **Intelligent Task Tracking**:
-  - **User & Priority Filtering**: Quickly narrow down tasks by assignee, priority, or status.
-  - **Overdue Management**: Automated highlighting of tasks past their deadline.
-- **Role-Based Access Control (RBAC)**:
-  - **Admin**: Full organization management, team creation, and deep analytics.
-  - **Manager**: Project oversight and team task assignment.
-  - **Team Member**: Personal task tracking and project collaboration.
-- **Team Management**: Robust search and management tools to oversee organization roles, departments, and member status.
+- **Cinematic UI Experience**:
+  - **Dynamic Backgrounds**: Floating cinematic orbs and motivational quotes for a premium atmosphere.
+  - **Glassmorphism Overhaul**: Deep transparency effects and smooth micro-animations.
+- **Project & Team Management**:
+  - **Project Membership**: Multi-user assignment to projects via a dedicated "Project Team" selector.
+  - **Role-Based Access Control**: Restricted editing and reporting views based on user roles (Admin/Manager/Member).
+- **KPI Analytics**: Instant metrics for 7 unique task statuses (Pending, In Progress, Awaiting Zoho/Client/Team, Done, Cancelled) with zero-data protection.
+- **Excel Data Export**: 📥 Export organization-wide data into Excel-compatible reports with a single click.
+- **Kanban Pipeline**: High-density 4-column grid layout for maximum task visibility.
 
 ## 🛠️ Technology Stack
 
 - **Framework**: Next.js 14 (App Router)
 - **Language**: TypeScript
-- **Database & Auth**: Supabase
-- **Styling**: Vanilla CSS (Premium Glassmorphism Design)
-- **Reporting**: Excel-compatible CSV generation with BOM for seamless data analysis.
+- **AI Engine**: Google Gemini 2.5 Flash (Action-Oriented Intent Parsing)
+- **Database & Auth**: Supabase (PostgreSQL with RLS)
+- **Styling**: Vanilla CSS (Custom Cinematic Design System)
+- **Reporting**: Excel-compatible CSV generation with BOM support.
 
 ## 📦 Installation
 

@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { TASK_STATUS_CONFIG, TASK_PRIORITY_CONFIG } from '@/lib/types';
 import type { Task, Profile, Project } from '@/lib/types';
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js';
@@ -11,22 +12,35 @@ import { Doughnut, Bar } from 'react-chartjs-2';
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 export default function ReportsPage() {
+  const { user, profile } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Profile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
+    if (!user || !profile) return;
+
+    let taskQuery = supabase.from('tasks').select('*');
+    let memberQuery = supabase.from('profiles').select('*').eq('is_active', true);
+
+    // Filter for Team Members
+    if (profile.role === 'team_member') {
+      taskQuery = taskQuery.eq('assignee_id', user.id);
+      memberQuery = memberQuery.eq('id', user.id);
+    }
+
     const [tRes, mRes, pRes] = await Promise.all([
-      supabase.from('tasks').select('*'),
-      supabase.from('profiles').select('*').eq('is_active', true),
+      taskQuery,
+      memberQuery,
       supabase.from('projects').select('*'),
     ]);
+    
     if (tRes.data) setTasks(tRes.data as Task[]);
     if (mRes.data) setMembers(mRes.data as Profile[]);
     if (pRes.data) setProjects(pRes.data as Project[]);
     setLoading(false);
-  }, []);
+  }, [user, profile]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

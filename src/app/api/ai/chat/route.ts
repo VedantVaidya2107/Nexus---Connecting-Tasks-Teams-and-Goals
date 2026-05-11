@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { processUserQuery } from '@/lib/ai/gemini';
 
+// Admin client for executing bot actions
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('Authorization');
@@ -58,7 +64,23 @@ export async function POST(req: NextRequest) {
     // 4. Process with Gemini
     const aiResponse = await processUserQuery(message, user.id, history || []);
 
-    // 5. Save AI response
+    // 5. Execute Actions if any
+    if (aiResponse.action === 'create_task' && aiResponse.data) {
+      const { title, project_id, priority, due_date } = aiResponse.data;
+      await supabaseAdmin.from('tasks').insert({
+        title,
+        project_id,
+        priority: priority || 'medium',
+        due_date,
+        assignee_id: user.id,
+        status: 'pending'
+      });
+    } else if (aiResponse.action === 'update_task_status' && aiResponse.data) {
+      const { task_id, status } = aiResponse.data;
+      await supabaseAdmin.from('tasks').update({ status }).eq('id', task_id);
+    }
+
+    // 6. Save AI response
     await supabase.from('ai_messages').insert({
       conversation_id: currentConvId,
       role: 'assistant',
