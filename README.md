@@ -10,8 +10,10 @@ Nexus is a modern, high-performance project management web application designed 
   - **Reassign Tasks**: Hand off tasks to different team members via chat.
 - **Dynamic Dashboard**: Real-time overview of tasks, team performance, and activity logs.
 - **Cinematic UI Experience**:
-  - **Dynamic Backgrounds**: Floating cinematic orbs and motivational quotes for a premium atmosphere.
-  - **Glassmorphism Overhaul**: Deep transparency effects and smooth micro-animations.
+  - **Staggered Animations**: Fluid, GPU-accelerated page transitions, cascading Kanban columns, and data table rows powered by Framer Motion.
+  - **Interactive Elements**: Animated KPI counters, pop-up modals, and spring-loaded hover states for premium micro-interactions.
+  - **Dynamic Backgrounds**: Optimized floating cinematic orbs, a subtle particle field, and drifting mesh layers that create a high-end atmosphere while maintaining 60FPS.
+  - **Deep Glassmorphism**: Unified transparency design system featuring responsive hover elevations, ambient shadow-casting, and glowing data containers.
 - **Project & Team Management**:
   - **Project Membership**: Multi-user assignment to projects via a dedicated "Project Team" selector.
   - **Role-Based Access Control**: Restricted editing and reporting views based on user roles (Admin/Manager/Member).
@@ -25,7 +27,7 @@ Nexus is a modern, high-performance project management web application designed 
 - **Language**: TypeScript
 - **AI Engine**: Google Gemini 2.5 Flash (Action-Oriented Intent Parsing)
 - **Database & Auth**: Supabase (PostgreSQL with RLS)
-- **Styling**: Vanilla CSS (Custom Cinematic Design System)
+- **Styling & Animation**: Vanilla CSS (Custom Cinematic Design System) + Framer Motion
 - **Reporting**: Excel-compatible CSV generation with BOM support.
 
 ## 📦 Installation
