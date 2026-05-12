@@ -72,4 +72,3 @@ Nexus features a **Premium Dark Mode** with a glassmorphism aesthetic. It priori
 
 ---
 
-Built with ❤️ by Antigravity.
