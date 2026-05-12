@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { TASK_STATUS_CONFIG, TASK_PRIORITY_CONFIG } from '@/lib/types';
 import type { Task, Profile } from '@/lib/types';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function MyTasksPage() {
   const { user } = useAuth();
@@ -46,10 +47,18 @@ export default function MyTasksPage() {
     fetch();
   };
 
-  const TaskRow = ({ t }: { t: Task }) => (
-    <div className="glass-card" style={{ padding: '14px 18px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-      <button
+  const TaskRow = ({ t, index }: { t: Task, index: number }) => (
+    <motion.div 
+      className="glass-card" 
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.3 }}
+      style={{ padding: '14px 18px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}
+    >
+      <motion.button
         onClick={() => toggleComplete(t)}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
         style={{
           width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
           border: `2px solid ${t.status === 'done' ? 'var(--green)' : 'var(--border)'}`,
@@ -57,7 +66,13 @@ export default function MyTasksPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '12px', color: 'white',
         }}
-      >{t.status === 'done' ? '✓' : ''}</button>
+      >
+        <AnimatePresence>
+          {t.status === 'done' && (
+            <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>✓</motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 600, fontSize: '14px', textDecoration: t.status === 'done' ? 'line-through' : 'none', opacity: t.status === 'done' ? 0.5 : 1 }}>{t.title}</div>
         {t.project && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>📁 {(t.project as unknown as { name: string }).name}</div>}
@@ -69,18 +84,18 @@ export default function MyTasksPage() {
         {TASK_STATUS_CONFIG[t.status].label}
       </span>
       {t.due_date && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{new Date(t.due_date).toLocaleDateString()}</span>}
-    </div>
+    </motion.div>
   );
 
   const Section = ({ title, items, color }: { title: string; items: Task[]; color: string }) => {
     if (items.length === 0) return null;
     return (
       <div style={{ marginBottom: '28px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <h3 className="section-label" style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
           {title} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({items.length})</span>
         </h3>
-        {items.map(t => <TaskRow key={t.id} t={t} />)}
+        {items.map((t, index) => <TaskRow key={t.id} t={t} index={index} />)}
       </div>
     );
   };

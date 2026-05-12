@@ -8,6 +8,7 @@ import { TASK_STATUS_CONFIG, TASK_PRIORITY_CONFIG } from '@/lib/types';
 import type { Task, TaskStatus, TaskPriority, Profile, Project } from '@/lib/types';
 import toast from 'react-hot-toast';
 import { createTask, updateTaskStatus, updateTask } from '@/actions/tasks';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const STATUSES: TaskStatus[] = ['pending', 'in_progress', 'awaiting_zoho', 'awaiting_client', 'awaiting_team', 'done', 'cancelled'];
 
@@ -219,13 +220,16 @@ export default function TasksPage() {
 
       {view === 'kanban' && (
         <div className="kanban-board">
-          {STATUSES.map(status => {
+          {STATUSES.map((status, colIndex) => {
             const colTasks = filtered.filter(t => t.status === status);
             const cfg = TASK_STATUS_CONFIG[status];
             return (
-              <div
+              <motion.div
                 key={status}
                 className="kanban-column"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: colIndex * 0.1, duration: 0.4 }}
                 onDragOver={e => e.preventDefault()}
                 onDrop={() => { if (draggedTaskId) { moveTask(draggedTaskId, status); setDraggedTaskId(null); } }}
               >
@@ -237,11 +241,16 @@ export default function TasksPage() {
                   <span className="count">{colTasks.length}</span>
                 </div>
                 <div className="kanban-column-body">
-                  {colTasks.map(t => (
-                    <div
+                  {colTasks.map((t, tIndex) => (
+                    <motion.div
                       key={t.id}
                       className="glass-card task-card"
                       draggable
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: (colIndex * 0.1) + (tIndex * 0.05), duration: 0.3 }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onDragStart={() => setDraggedTaskId(t.id)}
                       onClick={() => openEdit(t)}
                     >
@@ -264,13 +273,13 @@ export default function TasksPage() {
                           {(t.assignee as any).full_name}
                         </div>
                       )}
-                    </div>
+                    </motion.div>
                   ))}
                   {colTasks.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '13px' }}>No tasks</div>
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -283,8 +292,13 @@ export default function TasksPage() {
               <tr><th>Task</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Due Date</th><th>Actions</th></tr>
             </thead>
             <tbody>
-              {filtered.map(t => (
-                <tr key={t.id}>
+              {filtered.map((t, idx) => (
+                <motion.tr 
+                  key={t.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.03, duration: 0.3 }}
+                >
                   <td style={{ fontWeight: 600, cursor: 'pointer' }} onClick={() => openEdit(t)}>{t.title}</td>
                   <td>
                     <span className="badge" style={{ background: TASK_STATUS_CONFIG[t.status].bg, color: TASK_STATUS_CONFIG[t.status].color }}>
@@ -306,7 +320,7 @@ export default function TasksPage() {
                       <button className="btn btn-ghost btn-sm" onClick={() => deleteTask(t.id)}>🗑️</button>
                     )}
                   </td>
-                </tr>
+                </motion.tr>
               ))}
               {filtered.length === 0 && (
                 <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>No tasks found</td></tr>
@@ -316,10 +330,21 @@ export default function TasksPage() {
         </div>
       )}
 
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
+      <AnimatePresence>
+        {showModal && (
+          <motion.div 
+            className="modal-overlay" 
+            onClick={() => setShowModal(false)}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          >
+            <motion.div 
+              className="modal" 
+              onClick={e => e.stopPropagation()}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            >
+              <div className="modal-header">
               <h2>{editTask ? 'Edit Task' : 'Create Task'}</h2>
               <button className="btn-ghost" onClick={() => setShowModal(false)}>✕</button>
             </div>
@@ -374,9 +399,10 @@ export default function TasksPage() {
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
               <button className="btn btn-primary" onClick={saveTask}>{editTask ? 'Update' : 'Create'}</button>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
     </AppLayout>
   );
 }

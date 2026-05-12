@@ -24,6 +24,24 @@ import {
   XCircle, 
   TrendingUp 
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const Counter = ({ value }: { value: number }) => {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let startTime: number;
+    const duration = 1000;
+    const update = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+      const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      setCount(Math.floor(ease * value));
+      if (progress < 1) requestAnimationFrame(update);
+    };
+    requestAnimationFrame(update);
+  }, [value]);
+  return <>{count}</>;
+};
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Tooltip, Legend, Filler);
 
@@ -249,15 +267,17 @@ export default function DashboardPage() {
           const Icon = kpi.icon;
           const kpiColor = kpi.color;
           return (
-            <div 
+            <motion.div 
               key={kpi.label} 
-              className="glass-card kpi-card anim-stagger" 
+              className="glass-card kpi-card" 
+              initial={{ opacity: 0, scale: 0.94, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ delay: idx * 0.05, duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
               style={{ 
                 cursor: kpi.value > 0 ? 'pointer' : 'default',
-                animationDelay: `${idx * 0.05}s`,
                 position: 'relative',
                 overflow: 'hidden',
-                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                transition: 'border-color 0.5s, box-shadow 0.5s'
               }}
               onClick={() => kpi.value > 0 && (window.location.href = kpi.href)}
               onMouseEnter={(e) => {
@@ -276,7 +296,7 @@ export default function DashboardPage() {
                 const target = e.currentTarget;
                 target.style.transform = 'translateY(0) scale(1)';
                 target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                target.style.boxShadow = '0 10px 30px rgba(0,0,0,0.3)';
+                target.style.boxShadow = 'var(--glass-shadow)';
                 const hint = target.querySelector('.kpi-hint') as HTMLElement;
                 if (hint) { hint.style.opacity = '0'; hint.style.transform = 'translateY(10px)'; }
                 const watermark = target.querySelector('.kpi-watermark') as HTMLElement;
@@ -287,7 +307,8 @@ export default function DashboardPage() {
                 className="kpi-watermark"
                 style={{ 
                   position: 'absolute', top: '-10px', right: '-10px', opacity: 0.15, zIndex: 0,
-                  transform: 'rotate(15deg)', transition: 'all 0.5s ease', color: kpiColor
+                  transform: 'rotate(15deg)', transition: 'all 0.5s ease', color: kpiColor,
+                  animation: 'spin 30s linear infinite'
                 }} 
               >
                 <Icon size={110} />
@@ -309,7 +330,7 @@ export default function DashboardPage() {
 
               <div style={{ position: 'relative', zIndex: 1 }}>
                 <div className="kpi-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{kpi.label}</div>
-                <div className="kpi-value" style={{ fontSize: '36px', fontWeight: 900, margin: '8px 0', color: 'var(--text-primary)' }}>{kpi.value}</div>
+                <div className="kpi-value" style={{ fontSize: '36px', fontWeight: 900, margin: '8px 0', color: 'var(--text-primary)' }}><Counter value={kpi.value} /></div>
               </div>
 
               <div className="kpi-hint" style={{ 
@@ -323,42 +344,48 @@ export default function DashboardPage() {
                   View Details
                 </div>
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
 
       <div className="charts-grid">
-        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.1s' }}>
+        <motion.div className="glass-card chart-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.5 }}>
           <h3>Task Status Distribution</h3>
           <div className="chart-container" style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{ width: '240px', height: '240px' }}>
               <Doughnut data={statusChartData} options={{ responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 12, font: { size: 11 } } } } }} />
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.2s' }}>
+        <motion.div className="glass-card chart-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.5 }}>
           <h3>Tasks by Priority</h3>
           <div className="chart-container">
             <Bar data={priorityChartData} options={{ ...chartDefaults, responsive: true, maintainAspectRatio: false, indexAxis: 'y' as const }} />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.3s', gridColumn: 'span 2' }}>
+        <motion.div className="glass-card chart-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.5 }} style={{ gridColumn: 'span 2' }}>
           <h3>Task Completion Trend (Last 7 Days)</h3>
           <div className="chart-container">
             <Line data={trendData} options={{ ...chartDefaults, responsive: true, maintainAspectRatio: false }} />
           </div>
-        </div>
+        </motion.div>
       </div>
 
       <div className="charts-grid" style={{ gridTemplateColumns: '2fr 1fr' }}>
-        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.4s' }}>
+        <motion.div className="glass-card chart-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
           <h3>Recent Team Activity</h3>
           <ul className="activity-feed">
-            {activities.length > 0 ? activities.map(act => (
-              <li key={act.id} className="activity-item">
+            {activities.length > 0 ? activities.map((act, idx) => (
+              <motion.li 
+                key={act.id} 
+                className="activity-item"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.6 + idx * 0.05, duration: 0.4 }}
+              >
                 <div className="user-avatar" style={{ width: '32px', height: '32px', fontSize: '12px' }}>
                   {act.user?.full_name?.charAt(0) || '?'}
                 </div>
@@ -368,15 +395,15 @@ export default function DashboardPage() {
                   </div>
                   <div className="activity-time">{new Date(act.created_at).toLocaleString()}</div>
                 </div>
-              </li>
+              </motion.li>
             )) : <li className="empty-state">No recent activity</li>}
           </ul>
-        </div>
+        </motion.div>
 
-        <div className="glass-card chart-card anim-fade-in" style={{ animationDelay: '0.5s' }}>
+        <motion.div className="glass-card chart-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.5 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h3 style={{ margin: 0 }}>Critical Overdue</h3>
-            <span className="badge" style={{ background: 'var(--red)', color: 'white' }}>{overdue}</span>
+            <span className="badge" style={{ background: 'var(--red)', color: 'white', animation: 'dotPulse 1.5s infinite' }}>{overdue}</span>
           </div>
           {overdue === 0 ? (
             <div className="empty-state" style={{ padding: '20px 0' }}>
@@ -399,7 +426,7 @@ export default function DashboardPage() {
               </tbody>
             </table>
           )}
-        </div>
+        </motion.div>
       </div>
     </AppLayout>
   );

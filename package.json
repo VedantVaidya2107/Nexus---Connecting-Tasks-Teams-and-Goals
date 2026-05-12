@@ -20,7 +20,8 @@
     "@google/generative-ai": "^0.11.4",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "react-hot-toast": "^2.4.1"
+    "react-hot-toast": "^2.4.1",
+    "framer-motion": "^11.2.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

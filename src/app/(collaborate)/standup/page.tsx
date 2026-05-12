@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import type { DailyUpdate, Profile, Task } from '@/lib/types';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 export default function StandupPage() {
   const { user, profile } = useAuth();
@@ -69,7 +70,7 @@ export default function StandupPage() {
       <div className="page-header"><div><h1>Daily Standup</h1><div className="subtitle">{new Date().toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</div></div></div>
 
       {/* My Update Form */}
-      <div className="glass-card" style={{ padding: '28px', marginBottom: '28px' }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card" style={{ padding: '28px', marginBottom: '28px' }}>
         <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '20px' }}>📝 Your Update {myUpdate ? '(Saved ✓)' : ''}</h3>
         <div className="form-group">
           <label className="form-label">✅ What did you complete yesterday?</label>
@@ -99,16 +100,27 @@ export default function StandupPage() {
           <textarea className="form-textarea" value={blockers} onChange={e => setBlockers(e.target.value)} placeholder="Describe blockers or type 'None'" style={{ minHeight: '60px' }} />
         </div>
         <button className="btn btn-primary" onClick={saveUpdate}>{myUpdate ? 'Update' : 'Submit'}</button>
-      </div>
+      </motion.div>
 
       {/* Team Updates */}
       <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>Team Updates ({updates.length})</h3>
       {updates.length === 0 ? (
-        <div className="empty-state"><div className="empty-icon">🎯</div><h3>No updates yet today</h3><p>Be the first to share your standup!</p></div>
+        <motion.div className="empty-state" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <motion.div className="empty-icon" animate={{ y: [0, -10, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>🎯</motion.div>
+          <h3>No updates yet today</h3>
+          <p>Be the first to share your standup!</p>
+        </motion.div>
       ) : (
         <div style={{ display: 'grid', gap: '16px' }}>
-          {updates.map(u => (
-            <div key={u.id} className="glass-card" style={{ padding: '20px' }}>
+          {updates.map((u, index) => (
+            <motion.div 
+              key={u.id} 
+              className="glass-card" 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1, duration: 0.4 }}
+              style={{ padding: '20px' }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
                 <div className="user-avatar" style={{ width: 36, height: 36, fontSize: 13 }}>{u.user?.full_name?.[0] || '?'}</div>
                 <div>
@@ -119,7 +131,7 @@ export default function StandupPage() {
               {u.completed_yesterday && <div style={{ marginBottom: '10px' }}><strong style={{ fontSize: '12px', color: 'var(--green)' }}>YESTERDAY:</strong><p style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.5 }}>{u.completed_yesterday}</p></div>}
               {u.planned_today && <div style={{ marginBottom: '10px' }}><strong style={{ fontSize: '12px', color: 'var(--blue)' }}>TODAY:</strong><p style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.5 }}>{u.planned_today}</p></div>}
               {u.blockers && u.blockers.toLowerCase() !== 'none' && <div><strong style={{ fontSize: '12px', color: 'var(--red)' }}>BLOCKERS:</strong><p style={{ fontSize: '13px', marginTop: '4px', lineHeight: 1.5 }}>{u.blockers}</p></div>}
-            </div>
+            </motion.div>
           ))}
         </div>
       )}

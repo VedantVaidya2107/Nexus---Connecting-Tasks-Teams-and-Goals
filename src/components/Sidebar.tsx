@@ -78,7 +78,10 @@ export default function Sidebar() {
 
       <div className="sidebar-footer">
         <div className="user-card">
-          <div className="user-avatar">{initials}</div>
+          <div className="user-avatar">
+            {initials}
+            <div className="online-dot" />
+          </div>
           <div className="user-info">
             <div className="name">{profile?.full_name || 'Loading...'}</div>
             <div className="role">{profile?.role?.replace('_', ' ') || ''}</div>

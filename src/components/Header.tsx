@@ -17,12 +17,20 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
+  const [isScrolled, setIsScrolled] = useState(false);
+
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'light') {
       setTheme('light');
       document.documentElement.classList.add('light-mode');
     }
+
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const toggleTheme = () => {
@@ -55,10 +63,10 @@ export default function Header({ title, subtitle }: HeaderProps) {
   };
 
   return (
-    <header className="header">
+    <header className={`header ${isScrolled ? 'scrolled' : ''}`} style={isScrolled ? { background: 'rgba(8, 13, 26, 0.9)', borderBottom: '1px solid rgba(124, 58, 237, 0.2)' } : { transition: 'all 0.3s ease' }}>
       <div className="header-left">
         <div>
-          <h2>{title}</h2>
+          <h2 className="page-title">{title}</h2>
           {subtitle && <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>{subtitle}</p>}
         </div>
       </div>
@@ -72,10 +80,15 @@ export default function Header({ title, subtitle }: HeaderProps) {
             onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
+        
+        <button className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}>
+          + New Task
+        </button>
+
         <button className="icon-btn" onClick={toggleTheme} title="Toggle Theme">
           {theme === 'dark' ? '☀️' : '🌙'}
         </button>
-        <button className="icon-btn" onClick={() => setShowNotifs(!showNotifs)}>
+        <button className={`icon-btn ${notifications.length > 0 ? 'has-alerts' : ''}`} onClick={() => setShowNotifs(!showNotifs)}>
           🔔
           {notifications.length > 0 && <span className="dot" />}
         </button>

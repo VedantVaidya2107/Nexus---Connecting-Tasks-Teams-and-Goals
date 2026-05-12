@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { TASK_PRIORITY_CONFIG } from '@/lib/types';
 import type { Task } from '@/lib/types';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -84,13 +85,20 @@ export default function CalendarPage() {
           const dayTasks = tasks.filter(t => t.due_date === cell.date);
           const isToday = new Date(cell.date).toDateString() === today;
           return (
-            <div key={i} className={`calendar-cell ${!cell.isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}`}>
+            <motion.div 
+              key={i} 
+              className={`calendar-cell ${!cell.isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}`}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.01, duration: 0.3 }}
+            >
               <div className="day-number">{cell.day}</div>
               {dayTasks.slice(0, 3).map(t => (
-                <div 
+                <motion.div 
                   key={t.id} 
                   className="calendar-event" 
                   style={{ background: TASK_PRIORITY_CONFIG[t.priority].bg, color: TASK_PRIORITY_CONFIG[t.priority].color }}
+                  whileHover={{ scale: 1.05 }}
                   onMouseEnter={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     setHoveredTask({ task: t, x: rect.left, y: rect.top - 8 });
@@ -98,43 +106,49 @@ export default function CalendarPage() {
                   onMouseLeave={() => setHoveredTask(null)}
                 >
                   {t.title}
-                </div>
+                </motion.div>
               ))}
               {dayTasks.length > 3 && <div style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '2px 6px' }}>+{dayTasks.length - 3} more</div>}
-            </div>
+            </motion.div>
           );
         })}
       </div>
 
       {/* Custom Floating Tooltip */}
-      {hoveredTask && (
-        <div 
-          style={{
-            position: 'fixed',
-            left: hoveredTask.x,
-            top: hoveredTask.y,
-            transform: 'translateY(-100%)',
-            background: 'rgba(20, 20, 30, 0.95)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid var(--border)',
-            padding: '12px 16px',
-            borderRadius: '10px',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-            zIndex: 9999,
-            pointerEvents: 'none',
-            minWidth: '220px',
-            color: 'white'
-          }}
-        >
-          <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '6px' }}>{hoveredTask.task.title}</div>
-          <div style={{ fontSize: '12px', color: '#a1a1aa', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ background: '#3f3f46', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>
-              {(hoveredTask.task.assignee as any)?.full_name?.[0] || '?'}
-            </span>
-            {(hoveredTask.task.assignee as any)?.full_name || 'Unassigned'}
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {hoveredTask && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              position: 'fixed',
+              left: hoveredTask.x,
+              top: hoveredTask.y,
+              transform: 'translateY(-100%)',
+              background: 'rgba(20, 20, 30, 0.95)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid var(--border)',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+              zIndex: 9999,
+              pointerEvents: 'none',
+              minWidth: '220px',
+              color: 'white'
+            }}
+          >
+            <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '6px' }}>{hoveredTask.task.title}</div>
+            <div style={{ fontSize: '12px', color: '#a1a1aa', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ background: '#3f3f46', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>
+                {(hoveredTask.task.assignee as any)?.full_name?.[0] || '?'}
+              </span>
+              {(hoveredTask.task.assignee as any)?.full_name || 'Unassigned'}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AppLayout>
   );
 }

@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { supabase } from '@/lib/supabase';
 import type { Profile, Task } from '@/lib/types';
+import { motion } from 'framer-motion';
 
 export default function TeamPage() {
   const [members, setMembers] = useState<Profile[]>([]);
@@ -26,17 +27,25 @@ export default function TeamPage() {
 
   return (
     <AppLayout>
-      <div className="page-header"><div><h1>Team</h1><div className="subtitle">{members.length} members</div></div></div>
+      <div className="page-header"><div><h1 className="page-title">Team</h1><div className="subtitle">{members.length} members</div></div></div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-        {members.map(m => {
+        {members.map((m, index) => {
           const mTasks = tasks.filter(t => t.assignee_id === m.id);
           const done = mTasks.filter(t => t.status === 'completed').length;
           const inProg = mTasks.filter(t => t.status === 'in_progress').length;
           const rate = mTasks.length > 0 ? Math.round((done / mTasks.length) * 100) : 0;
           const initials = m.full_name ? m.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??';
           return (
-            <div key={m.id} className="glass-card" style={{ padding: '24px' }}>
+            <motion.div 
+              key={m.id} 
+              className="glass-card" 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ delay: index * 0.05, duration: 0.4 }}
+              whileHover={{ y: -5, boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}
+              style={{ padding: '24px' }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
                 <div className="user-avatar" style={{ width: 48, height: 48, fontSize: 16 }}>{initials}</div>
                 <div>
@@ -62,8 +71,15 @@ export default function TeamPage() {
                 <span style={{ color: 'var(--text-muted)' }}>Completion</span>
                 <span style={{ fontWeight: 600 }}>{rate}%</span>
               </div>
-              <div className="progress-bar"><div className="fill" style={{ width: `${rate}%` }} /></div>
-            </div>
+              <div className="progress-bar">
+                <motion.div 
+                  className="fill" 
+                  initial={{ width: 0 }} 
+                  animate={{ width: `${rate}%` }} 
+                  transition={{ delay: 0.2 + (index * 0.05), duration: 0.8, ease: "easeOut" }} 
+                />
+              </div>
+            </motion.div>
           );
         })}
       </div>

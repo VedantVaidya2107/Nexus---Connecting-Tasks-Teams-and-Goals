@@ -42,9 +42,9 @@ export default function DynamicBackground() {
       {/* Layer 3: Mesh Grid */}
       <div className="mesh-grid"></div>
 
-      {/* Layer 4: Particle Field (50 particles) */}
+      {/* Layer 4: Particle Field (40 particles) */}
       <div className="particle-field">
-        {[...Array(50)].map((_, i) => (
+        {[...Array(40)].map((_, i) => (
           <div key={i} className="particle" style={{
             left: `${Math.random() * 100}%`,
             top: `${Math.random() * 100}%`,
@@ -92,23 +92,23 @@ export default function DynamicBackground() {
           background: var(--bg-orb-1);
           top: -10%;
           left: -10%;
-          animation: drift1 60s linear infinite;
+          animation: drift1 40s linear infinite;
         }
         .orb-2 {
-          width: 800px;
-          height: 800px;
+          width: 500px;
+          height: 500px;
           background: var(--bg-orb-2);
           bottom: -20%;
           right: -10%;
-          animation: drift2 60s linear infinite;
+          animation: drift2 55s linear infinite;
         }
         .orb-3 {
-          width: 500px;
-          height: 500px;
+          width: 400px;
+          height: 400px;
           background: var(--bg-orb-3);
           top: 30%;
           right: 20%;
-          animation: drift3 60s linear infinite;
+          animation: drift3 70s linear infinite;
         }
 
         /* Layer 3: Mesh Grid */

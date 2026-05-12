@@ -74,7 +74,10 @@ export default function AIAssistant() {
       {/* Trigger Button */}
       {!isOpen && (
         <button className="ai-trigger-btn" onClick={() => setIsOpen(true)}>
-          <Sparkles size={24} />
+          <div className="ripple" />
+          <div className="ai-trigger-icon-wrapper">
+            <Sparkles size={24} />
+          </div>
         </button>
       )}
 
