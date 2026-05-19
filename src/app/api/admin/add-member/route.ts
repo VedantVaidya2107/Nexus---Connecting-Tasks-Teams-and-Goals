@@ -11,11 +11,7 @@ export async function POST(request: Request) {
       return apiResponse.error('Missing required fields: fullName, email, role, and password are required.');
     }
 
-    // 2. Auth Check (Verify the requester is an admin)
-    // In a real app, we'd verify the JWT from the header
-    // For now, we assume the frontend sends the createdBy ID of an admin
-
-    // 3. Create user in Supabase Auth
+    // 2. Create user in Supabase Auth
     const supabaseAdmin = getSupabaseAdmin();
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -30,7 +26,7 @@ export async function POST(request: Request) {
 
     const userId = authData.user.id;
 
-    // 4. Update the profile
+    // 3. Update the profile — also set must_change_password = true
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .update({
@@ -39,13 +35,31 @@ export async function POST(request: Request) {
         department,
         job_title: jobTitle,
         created_by: createdBy,
-        start_date: new Date().toISOString().split('T')[0]
+        start_date: new Date().toISOString().split('T')[0],
+        must_change_password: true,
       })
       .eq('id', userId);
 
     if (profileError) {
       await supabaseAdmin.auth.admin.deleteUser(userId);
       return apiResponse.error(profileError.message);
+    }
+
+    // 4. Send welcome email with temporary password
+    let emailSent = false;
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const emailRes = await fetch(`${baseUrl}/api/auth/send-welcome-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, fullName, temporaryPassword: password }),
+      });
+      const emailData = await emailRes.json();
+      if (emailRes.ok && emailData.success && emailData.data?.sent) {
+        emailSent = true;
+      }
+    } catch (emailError) {
+      console.error('Welcome email dispatch failed (non-fatal):', emailError);
     }
 
     // 5. Log Activity
@@ -57,7 +71,7 @@ export async function POST(request: Request) {
       entity_name: fullName
     });
 
-    return apiResponse.success({ id: userId, email, role }, 'Team member added successfully', 201);
+    return apiResponse.success({ id: userId, email, role, password, emailSent }, 'Team member added successfully', 201);
 
   } catch (error: any) {
     return apiResponse.internalError(error);

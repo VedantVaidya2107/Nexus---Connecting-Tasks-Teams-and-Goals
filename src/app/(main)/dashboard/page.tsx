@@ -221,10 +221,10 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
-      <div className="page-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '24px', justifyContent: 'flex-end' }}>
+      <div className="page-actions dashboard-actions">
         <select 
-          className="form-select" 
-          style={{ width: 'auto', padding: '8px 12px', fontSize: '13px', minWidth: '140px' }}
+          aria-label="Filter by Time"
+          className="form-select dashboard-filter-select min-w-140" 
           value={filterTime}
           onChange={e => setFilterTime(e.target.value)}
         >
@@ -235,16 +235,16 @@ export default function DashboardPage() {
           <option value="custom">Custom Range</option>
         </select>
         {filterTime === 'custom' && (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <input type="date" className="form-input" style={{ width: 'auto', padding: '6px 10px', fontSize: '12px' }} value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} />
-            <span style={{ color: 'var(--text-muted)' }}>to</span>
-            <input type="date" className="form-input" style={{ width: 'auto', padding: '6px 10px', fontSize: '12px' }} value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} />
+          <div className="dashboard-custom-date">
+            <input aria-label="Start Date" type="date" className="form-input dashboard-date-input" value={filterStartDate} onChange={e => setFilterStartDate(e.target.value)} />
+            <span className="dashboard-date-separator">to</span>
+            <input aria-label="End Date" type="date" className="form-input dashboard-date-input" value={filterEndDate} onChange={e => setFilterEndDate(e.target.value)} />
           </div>
         )}
         {profile?.role === 'admin' && (
           <select 
-            className="form-select" 
-            style={{ width: 'auto', padding: '8px 12px', fontSize: '13px', minWidth: '160px' }}
+            aria-label="Filter by Team Member"
+            className="form-select dashboard-filter-select min-w-160" 
             value={filterUser}
             onChange={e => setFilterUser(e.target.value)}
           >

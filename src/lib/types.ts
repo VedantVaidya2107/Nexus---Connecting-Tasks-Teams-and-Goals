@@ -17,6 +17,7 @@ export interface Profile {
   job_title: string | null;
   phone: string | null;
   is_active: boolean;
+  must_change_password: boolean;
   start_date: string | null;
   created_by: string | null;
   created_at: string;

@@ -233,13 +233,13 @@ export default function ProjectsPage() {
               <button className="btn-ghost" onClick={() => { setShowModal(false); resetForm(); }}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="form-group"><label className="form-label">Name *</label><input className="form-input" value={name} onChange={e => setName(e.target.value)} placeholder="Project name" /></div>
-              <div className="form-group"><label className="form-label">Description</label><textarea className="form-textarea" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Describe the project..." /></div>
+              <div className="form-group"><label htmlFor="projectName" className="form-label">Name *</label><input id="projectName" className="form-input" value={name} onChange={e => setName(e.target.value)} placeholder="Project name" /></div>
+              <div className="form-group"><label htmlFor="projectDesc" className="form-label">Description</label><textarea id="projectDesc" className="form-textarea" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Describe the project..." /></div>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div className="form-group"><label className="form-label">Start Date</label><input className="form-input" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
-                <div className="form-group"><label className="form-label">End Date</label><input className="form-input" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
-                <div className="form-group"><label className="form-label">Color</label><input type="color" value={color} onChange={e => setColor(e.target.value)} style={{ width: '100%', height: '42px', border: 'none', borderRadius: '8px', cursor: 'pointer' }} /></div>
+                <div className="form-group"><label htmlFor="projectStartDate" className="form-label">Start Date</label><input id="projectStartDate" className="form-input" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
+                <div className="form-group"><label htmlFor="projectEndDate" className="form-label">End Date</label><input id="projectEndDate" className="form-input" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
+                <div className="form-group"><label htmlFor="projectColor" className="form-label">Color</label><input id="projectColor" aria-label="Project Color" type="color" value={color} onChange={e => setColor(e.target.value)} style={{ width: '100%', height: '42px', border: 'none', borderRadius: '8px', cursor: 'pointer' }} /></div>
               </div>
 
               <div className="form-group">

@@ -80,10 +80,6 @@ export default function Header({ title, subtitle }: HeaderProps) {
             onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
-        
-        <button className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}>
-          + New Task
-        </button>
 
         <button className="icon-btn" onClick={toggleTheme} title="Toggle Theme">
           {theme === 'dark' ? '☀️' : '🌙'}

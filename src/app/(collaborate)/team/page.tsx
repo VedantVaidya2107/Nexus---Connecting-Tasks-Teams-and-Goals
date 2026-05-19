@@ -5,8 +5,12 @@ import AppLayout from '@/components/AppLayout';
 import { supabase } from '@/lib/supabase';
 import type { Profile, Task } from '@/lib/types';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function TeamPage() {
+  const { profile } = useAuth();
+  const router = useRouter();
   const [members, setMembers] = useState<Profile[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +31,22 @@ export default function TeamPage() {
 
   return (
     <AppLayout>
-      <div className="page-header"><div><h1 className="page-title">Team</h1><div className="subtitle">{members.length} members</div></div></div>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h1 className="page-title">Team</h1>
+          <div className="subtitle">{members.length} members</div>
+        </div>
+        {profile?.role === 'admin' && (
+          <button 
+            type="button"
+            className="btn btn-primary"
+            onClick={() => router.push('/team/manage')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <span>🛡️</span> Manage Team
+          </button>
+        )}
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
         {members.map((m, index) => {

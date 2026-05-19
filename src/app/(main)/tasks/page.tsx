@@ -205,13 +205,13 @@ export default function TasksPage() {
           <button className={`tab-item ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>List</button>
         </div>
         <div className="filter-bar" style={{ marginBottom: 0 }}>
-          <select className="form-select" style={{ width: 'auto', padding: '6px 12px', fontSize: '13px' }} value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
+          <select aria-label="Filter by Priority" className="form-select" style={{ width: 'auto', padding: '6px 12px', fontSize: '13px' }} value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
             <option value="all">All Priority</option>
             <option value="high">High</option>
             <option value="medium">Medium</option>
             <option value="low">Low</option>
           </select>
-          <select className="form-select" style={{ width: 'auto', padding: '6px 12px', fontSize: '13px' }} value={filterUser} onChange={e => setFilterUser(e.target.value)}>
+          <select aria-label="Filter by User" className="form-select" style={{ width: 'auto', padding: '6px 12px', fontSize: '13px' }} value={filterUser} onChange={e => setFilterUser(e.target.value)}>
             <option value="all">All Users</option>
             {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
           </select>
@@ -311,7 +311,7 @@ export default function TasksPage() {
                     </span>
                   </td>
                   <td>{(t.assignee as any)?.full_name || '—'}</td>
-                  <td style={{ color: t.due_date && new Date(t.due_date) < new Date() && t.status !== 'completed' ? 'var(--red)' : 'inherit' }}>
+                  <td className={t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done' ? 'text-danger' : ''}>
                     {t.due_date ? new Date(t.due_date).toLocaleDateString() : '—'}
                   </td>
                   <td>
@@ -323,7 +323,7 @@ export default function TasksPage() {
                 </motion.tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>No tasks found</td></tr>
+                <tr><td colSpan={6} className="table-empty-state">No tasks found</td></tr>
               )}
             </tbody>
           </table>
@@ -350,29 +350,30 @@ export default function TasksPage() {
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label className="form-label">Title *</label>
-                <input className="form-input" value={formTitle} onChange={e => setFormTitle(e.target.value)} placeholder="Task title" />
+                <label htmlFor="taskTitle" className="form-label">Title *</label>
+                <input id="taskTitle" className="form-input" value={formTitle} onChange={e => setFormTitle(e.target.value)} placeholder="Task title" />
               </div>
               <div className="form-group">
-                <label className="form-label">Description</label>
-                <textarea className="form-textarea" value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="Describe the task..." />
+                <label htmlFor="taskDesc" className="form-label">Description</label>
+                <textarea id="taskDesc" className="form-textarea" value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="Describe the task..." />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label className="form-label">Status</label>
-                  <select className="form-select" value={formStatus} onChange={e => setFormStatus(e.target.value as TaskStatus)}>
+                  <label htmlFor="taskStatus" className="form-label">Status</label>
+                  <select id="taskStatus" className="form-select" value={formStatus} onChange={e => setFormStatus(e.target.value as TaskStatus)}>
                     {STATUSES.map(s => <option key={s} value={s}>{TASK_STATUS_CONFIG[s].label}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Priority</label>
-                  <select className="form-select" value={formPriority} onChange={e => setFormPriority(e.target.value as TaskPriority)}>
+                  <label htmlFor="taskPriority" className="form-label">Priority</label>
+                  <select id="taskPriority" className="form-select" value={formPriority} onChange={e => setFormPriority(e.target.value as TaskPriority)}>
                     {(['high', 'medium', 'low'] as const).map(p => <option key={p} value={p}>{TASK_PRIORITY_CONFIG[p].label}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Assignee</label>
+                  <label htmlFor="taskAssignee" className="form-label">Assignee</label>
                   <select 
+                    id="taskAssignee"
                     className="form-select" 
                     value={formAssignee} 
                     onChange={e => setFormAssignee(e.target.value)}
@@ -383,15 +384,15 @@ export default function TasksPage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Project</label>
-                  <select className="form-select" value={formProject} onChange={e => setFormProject(e.target.value)}>
+                  <label htmlFor="taskProject" className="form-label">Project</label>
+                  <select id="taskProject" className="form-select" value={formProject} onChange={e => setFormProject(e.target.value)}>
                     <option value="">No project</option>
                     {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Due Date</label>
-                  <input className="form-input" type="date" value={formDueDate} onChange={e => setFormDueDate(e.target.value)} />
+                  <label htmlFor="taskDueDate" className="form-label">Due Date</label>
+                  <input id="taskDueDate" className="form-input" type="date" value={formDueDate} onChange={e => setFormDueDate(e.target.value)} />
                 </div>
               </div>
             </div>

@@ -73,7 +73,7 @@ export default function AIAssistant() {
     <div className="ai-assistant-wrapper">
       {/* Trigger Button */}
       {!isOpen && (
-        <button className="ai-trigger-btn" onClick={() => setIsOpen(true)}>
+        <button type="button" aria-label="Open AI Assistant" className="ai-trigger-btn" onClick={() => setIsOpen(true)}>
           <div className="ripple" />
           <div className="ai-trigger-icon-wrapper">
             <Sparkles size={24} />
@@ -93,10 +93,10 @@ export default function AIAssistant() {
               </div>
             </div>
             <div className="ai-controls">
-              <button onClick={() => setIsMinimized(!isMinimized)}>
+              <button type="button" aria-label={isMinimized ? "Maximize" : "Minimize"} title={isMinimized ? "Maximize" : "Minimize"} onClick={() => setIsMinimized(!isMinimized)}>
                 {isMinimized ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
               </button>
-              <button onClick={() => setIsOpen(false)}><X size={16} /></button>
+              <button type="button" aria-label="Close" title="Close" onClick={() => setIsOpen(false)}><X size={16} /></button>
             </div>
           </div>
 
@@ -131,7 +131,7 @@ export default function AIAssistant() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                 />
-                <button onClick={sendMessage} disabled={!input.trim() || isLoading}>
+                <button type="button" aria-label="Send message" title="Send message" onClick={sendMessage} disabled={!input.trim() || isLoading}>
                   <Send size={18} />
                 </button>
               </div>
