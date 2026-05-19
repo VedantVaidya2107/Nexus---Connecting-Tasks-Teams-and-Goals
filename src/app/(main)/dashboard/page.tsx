@@ -59,6 +59,7 @@ export default function DashboardPage() {
   const [activities, setActivities] = useState<(ActivityLog & { user?: Profile })[]>([]);
   const [members, setMembers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [filterUser, setFilterUser] = useState<string>('all');
   const [filterTime, setFilterTime] = useState<string>('all');
   const [filterStartDate, setFilterStartDate] = useState<string>('');
@@ -66,24 +67,31 @@ export default function DashboardPage() {
 
   const fetchData = useCallback(async () => {
     if (!profile) return;
+    setRefreshing(true);
     
-    let tasksQuery = supabase.from('tasks').select('*, assignee:profiles!tasks_assignee_id_fkey(*)');
-    
-    // Privacy: Members only see their own tasks
-    if (profile.role === 'team_member') {
-      tasksQuery = tasksQuery.eq('assignee_id', profile.id);
-    }
+    try {
+      let tasksQuery = supabase.from('tasks').select('*, assignee:profiles!tasks_assignee_id_fkey(*)');
+      
+      // Privacy: Members only see their own tasks
+      if (profile.role === 'team_member') {
+        tasksQuery = tasksQuery.eq('assignee_id', profile.id);
+      }
 
-    const [tasksRes, actRes, membersRes] = await Promise.all([
-      tasksQuery,
-      supabase.from('activity_log').select('*, user:profiles(*)').order('created_at', { ascending: false }).limit(15),
-      supabase.from('profiles').select('*').eq('is_active', true),
-    ]);
-    
-    if (tasksRes.data) setTasks(tasksRes.data as Task[]);
-    if (actRes.data) setActivities(actRes.data as (ActivityLog & { user?: Profile })[]);
-    if (membersRes.data) setMembers(membersRes.data as Profile[]);
-    setLoading(false);
+      const [tasksRes, actRes, membersRes] = await Promise.all([
+        tasksQuery,
+        supabase.from('activity_log').select('*, user:profiles(*)').order('created_at', { ascending: false }).limit(15),
+        supabase.from('profiles').select('*').eq('is_active', true),
+      ]);
+      
+      if (tasksRes.data) setTasks(tasksRes.data as Task[]);
+      if (actRes.data) setActivities(actRes.data as (ActivityLog & { user?: Profile })[]);
+      if (membersRes.data) setMembers(membersRes.data as Profile[]);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [profile]);
 
   useEffect(() => { 
@@ -254,6 +262,21 @@ export default function DashboardPage() {
             ))}
           </select>
         )}
+        <button 
+          className="btn btn-secondary" 
+          onClick={fetchData} 
+          disabled={refreshing} 
+          title="Refresh dashboard data"
+          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          <RefreshCw 
+            size={16} 
+            style={{ 
+              animation: refreshing ? 'spin 1s linear infinite' : 'none',
+            }} 
+          />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
         <button className="btn btn-secondary" onClick={exportData} title="Export overall data">
           📥 Export
         </button>

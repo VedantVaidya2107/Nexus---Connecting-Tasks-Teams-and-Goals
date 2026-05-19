@@ -8,6 +8,7 @@ import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import AIAssistant from '@/components/AIAssistant';
 import DynamicBackground from '@/components/DynamicBackground';
+import QuoteFooter from '@/components/QuoteFooter';
 import toast from 'react-hot-toast';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -84,6 +85,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             style={{ minHeight: '100%', width: '100%' }}
           >
             {children}
+            <QuoteFooter />
           </motion.div>
         </AnimatePresence>
       </main>

@@ -97,7 +97,13 @@ export default function TasksPage() {
 
   const saveTask = async () => {
     if (!formTitle.trim()) { toast.error('Title is required'); return; }
-    if (formDueDate && new Date(formDueDate) < new Date(new Date().setHours(0,0,0,0))) {
+
+    // Only validate past due date if creating a new task, or if explicitly changing it on an existing task
+    const isNewPastDate = editTask 
+      ? formDueDate && formDueDate !== editTask.due_date && new Date(formDueDate) < new Date(new Date().setHours(0,0,0,0))
+      : formDueDate && new Date(formDueDate) < new Date(new Date().setHours(0,0,0,0));
+
+    if (isNewPastDate) {
       toast.error('Due date cannot be in the past'); return;
     }
 
