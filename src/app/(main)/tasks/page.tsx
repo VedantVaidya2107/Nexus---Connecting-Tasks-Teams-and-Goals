@@ -5,10 +5,19 @@ import AppLayout from '@/components/AppLayout';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { TASK_STATUS_CONFIG, TASK_PRIORITY_CONFIG } from '@/lib/types';
-import type { Task, TaskStatus, TaskPriority, Profile, Project } from '@/lib/types';
+import type { Task, TaskStatus, TaskPriority, Profile, Project, TimeEntry } from '@/lib/types';
 import toast from 'react-hot-toast';
 import { createTask, updateTaskStatus, updateTask } from '@/actions/tasks';
+import { createTimeEntry } from '@/actions/timeEntries';
 import { motion, AnimatePresence } from 'framer-motion';
+
+function fmtDuration(mins: number) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
 
 const STATUSES: TaskStatus[] = ['pending', 'in_progress', 'awaiting_zoho', 'awaiting_client', 'awaiting_team', 'done', 'cancelled'];
 
@@ -26,6 +35,7 @@ export default function TasksPage() {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [filterUser, setFilterUser] = useState<string>('all');
   const [filterOverdue, setFilterOverdue] = useState(false);
+  const [modalTab, setModalTab] = useState<'details' | 'time'>('details');
 
   // Form state
   const [formTitle, setFormTitle] = useState('');
@@ -35,6 +45,43 @@ export default function TasksPage() {
   const [formAssignee, setFormAssignee] = useState('');
   const [formProject, setFormProject] = useState('');
   const [formDueDate, setFormDueDate] = useState('');
+
+  // Time entry state
+  const [taskTimeEntries, setTaskTimeEntries] = useState<TimeEntry[]>([]);
+  const [timeHours, setTimeHours] = useState('');
+  const [timeMins, setTimeMins] = useState('');
+  const [timeDesc, setTimeDesc] = useState('');
+  const [timeDate, setTimeDate] = useState(new Date().toISOString().split('T')[0]);
+  const [logginTime, setLogginTime] = useState(false);
+  const [timeDurationMode, setTimeDurationMode] = useState<'range' | 'manual'>('range');
+  const [timeFromTime, setTimeFromTime] = useState('09:00');
+  const [timeToTime, setTimeToTime] = useState('');
+  const [timeBillable, setTimeBillable] = useState(true);
+
+  // Helpers
+  const isPrivileged = profile?.role === 'admin' || profile?.role === 'manager';
+  const todayStr = new Date().toISOString().split('T')[0];
+  const dateNDaysAgo = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().split('T')[0]; };
+  const timeToMinsUtil = (t: string): number | null => {
+    const match = t.match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return null;
+    const h = parseInt(match[1]); const m = parseInt(match[2]);
+    if (h > 23 || m > 59) return null;
+    return h * 60 + m;
+  };
+  const minsToTimeUtil = (m: number) => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+  const computedRangeMinsTask = (() => {
+    if (timeDurationMode !== 'range') return null;
+    const from = timeToMinsUtil(timeFromTime);
+    const to = timeToMinsUtil(timeToTime);
+    if (from === null || to === null || to <= from) return null;
+    return to - from;
+  })();
+  const totalTimeMins = timeDurationMode === 'range'
+    ? (computedRangeMinsTask ?? 0)
+    : ((parseInt(timeHours) || 0) * 60 + (parseInt(timeMins) || 0));
+  const timeDateDaysAgo = (() => { const now = new Date(); now.setHours(0,0,0,0); const d = new Date(timeDate); d.setHours(0,0,0,0); return Math.round((now.getTime()-d.getTime())/(86400000)); })();
+  const timeDateRestricted = !isPrivileged && timeDateDaysAgo > 7;
 
   const fetchAll = useCallback(async () => {
     const [tRes, pRes, prRes] = await Promise.all([
@@ -46,7 +93,7 @@ export default function TasksPage() {
       let fetchedTasks = tRes.data as Task[];
       if (profile?.role === 'team_member') {
         // Hide tasks explicitly assigned to other people
-        fetchedTasks = fetchedTasks.filter(t => !t.assignee_id || t.assignee_id === user?.id);
+        fetchedTasks = fetchedTasks.filter(t => t.assignee_id === user?.id);
       }
       setTasks(fetchedTasks);
     }
@@ -86,13 +133,55 @@ export default function TasksPage() {
     setShowModal(true);
   };
 
-  const openEdit = (t: Task) => {
+  const openEdit = async (t: Task) => {
     setEditTask(t);
     setFormTitle(t.title); setFormDesc(t.description || '');
     setFormStatus(t.status); setFormPriority(t.priority);
     setFormAssignee(t.assignee_id || ''); setFormProject(t.project_id || '');
     setFormDueDate(t.due_date || '');
+    setModalTab('details');
+    setTimeHours(''); setTimeMins(''); setTimeDesc('');
+    setTimeDate(new Date().toISOString().split('T')[0]);
+    setTimeDurationMode('range'); setTimeFromTime('09:00'); setTimeToTime(''); setTimeBillable(true);
+    // Fetch time entries for this task
+    const { data } = await supabase
+      .from('time_entries')
+      .select('*, user:profiles(full_name)')
+      .eq('task_id', t.id)
+      .order('logged_date', { ascending: false });
+    setTaskTimeEntries((data as TimeEntry[]) || []);
     setShowModal(true);
+  };
+
+  const logTimeOnTask = async () => {
+    if (!editTask) return;
+    if (timeDateRestricted) { toast.error('Team members can only log time within the past 7 days'); return; }
+    if (timeDateDaysAgo < 0) { toast.error('Cannot log time for a future date'); return; }
+    if (timeDurationMode === 'range') {
+      const from = timeToMinsUtil(timeFromTime);
+      const to = timeToMinsUtil(timeToTime);
+      if (from === null) { toast.error('Invalid start time'); return; }
+      if (to === null) { toast.error('Invalid end time'); return; }
+      if (to <= from) { toast.error('End time must be after start time'); return; }
+    }
+    if (totalTimeMins <= 0) { toast.error('Duration must be at least 1 minute'); return; }
+    setLogginTime(true);
+    const res = await createTimeEntry(
+      { task_id: editTask.id, duration_minutes: totalTimeMins, description: timeDesc.trim() || null, logged_date: timeDate, is_billable: timeBillable },
+      user?.id || ''
+    );
+    setLogginTime(false);
+    if (!res.success) { toast.error(res.message || 'Error'); return; }
+    toast.success('Time logged');
+    setTimeHours(''); setTimeMins(''); setTimeDesc(''); setTimeFromTime('09:00'); setTimeToTime('');
+    // Refresh entries
+    const { data } = await supabase
+      .from('time_entries')
+      .select('*, user:profiles(full_name)')
+      .eq('task_id', editTask.id)
+      .order('logged_date', { ascending: false });
+    setTaskTimeEntries((data as TimeEntry[]) || []);
+    fetchAll();
   };
 
   const saveTask = async () => {
@@ -354,6 +443,19 @@ export default function TasksPage() {
               <h2>{editTask ? 'Edit Task' : 'Create Task'}</h2>
               <button className="btn-ghost" onClick={() => setShowModal(false)}>✕</button>
             </div>
+
+            {/* Modal Tabs — only show when editing an existing task */}
+            {editTask && (
+              <div className="tab-bar" style={{ margin: '0 24px', borderBottom: '1px solid var(--border)', borderRadius: 0, padding: '0 0 0 0' }}>
+                <button className={`tab-item ${modalTab === 'details' ? 'active' : ''}`} onClick={() => setModalTab('details')}>📋 Details</button>
+                <button className={`tab-item ${modalTab === 'time' ? 'active' : ''}`} onClick={() => setModalTab('time')}>
+                  ⏱ Time {taskTimeEntries.length > 0 && <span style={{ marginLeft: 4, background: '#6366f1', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{taskTimeEntries.length}</span>}
+                </button>
+              </div>
+            )}
+
+            {/* Details Tab */}
+            {modalTab === 'details' && (
             <div className="modal-body">
               <div className="form-group">
                 <label htmlFor="taskTitle" className="form-label">Title *</label>
@@ -402,9 +504,198 @@ export default function TasksPage() {
                 </div>
               </div>
             </div>
+            )}
+
+            {/* Time Tab */}
+            {modalTab === 'time' && editTask && (
+            <div className="modal-body">
+              {/* Quick Log Form */}
+              <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 12, padding: '16px', marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#6366f1' }}>⏱ Quick Log</div>
+                  <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', fontSize: 10 }}>
+                    <button type="button" onClick={() => setTimeDurationMode('range')} style={{ padding: '3px 10px', fontWeight: 700, cursor: 'pointer', border: 'none', background: timeDurationMode === 'range' ? '#6366f1' : 'transparent', color: timeDurationMode === 'range' ? '#fff' : 'var(--text-muted)', transition: 'all 0.15s' }}>⏰ From–To</button>
+                    <button type="button" onClick={() => setTimeDurationMode('manual')} style={{ padding: '3px 10px', fontWeight: 700, cursor: 'pointer', border: 'none', background: timeDurationMode === 'manual' ? '#6366f1' : 'transparent', color: timeDurationMode === 'manual' ? '#fff' : 'var(--text-muted)', transition: 'all 0.15s' }}>🔢 Manual</button>
+                  </div>
+                </div>
+
+                {/* From–To mode */}
+                {timeDurationMode === 'range' && (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 3, textTransform: 'uppercase' }}>FROM</div>
+                        <input className="form-input" type="time" value={timeFromTime} onChange={e => setTimeFromTime(e.target.value)} style={{ fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }} />
+                      </div>
+                      <span style={{ fontSize: 18, color: 'var(--text-muted)', paddingTop: 16 }}>→</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 3, textTransform: 'uppercase' }}>TO</div>
+                        <input className="form-input" type="time" value={timeToTime} onChange={e => setTimeToTime(e.target.value)} style={{ fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }} />
+                      </div>
+                    </div>
+                    {computedRangeMinsTask && computedRangeMinsTask > 0 ? (
+                      <div style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', fontSize: 12, color: '#6366f1', fontWeight: 700 }}>
+                        ⏱ {fmtDuration(computedRangeMinsTask)} ({computedRangeMinsTask}min)
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', padding: '4px 0' }}>Set end time to see duration</div>
+                    )}
+                    <div style={{ marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {[{l:'30m',m:30},{l:'1h',m:60},{l:'2h',m:120},{l:'4h',m:240}].map(({l,m}) => (
+                        <button key={l} type="button" onClick={() => { const f = timeToMinsUtil(timeFromTime) ?? 9*60; setTimeFromTime(minsToTimeUtil(f)); setTimeToTime(minsToTimeUtil(f+m)); }}
+                          style={{ padding:'2px 8px', borderRadius:20, fontSize:10, fontWeight:700, cursor:'pointer', border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text-muted)' }}>{l}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Manual mode */}
+                {timeDurationMode === 'manual' && (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      <div style={{ position: 'relative' }}>
+                        <input className="form-input" type="number" min="0" placeholder="0" value={timeHours} onChange={e => setTimeHours(e.target.value)} style={{ paddingRight: 28, fontWeight: 700, textAlign: 'center' }} />
+                        <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)' }}>h</span>
+                      </div>
+                      <div style={{ position: 'relative' }}>
+                        <input className="form-input" type="number" min="0" max="59" placeholder="0" value={timeMins} onChange={e => setTimeMins(e.target.value)} style={{ paddingRight: 28, fontWeight: 700, textAlign: 'center' }} />
+                        <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)' }}>m</span>
+                      </div>
+                    </div>
+                    {totalTimeMins > 0 && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: '#6366f1' }}>= {fmtDuration(totalTimeMins)}</div>}
+                  </div>
+                )}
+
+                <input className="form-input" placeholder="What did you work on? (optional)" value={timeDesc} onChange={e => setTimeDesc(e.target.value)} style={{ marginBottom: 10 }} />
+
+                {/* Billing Type selection */}
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase' }}>Billing Type *</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => setTimeBillable(true)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                        cursor: 'pointer', transition: 'all 0.15s ease',
+                        border: `2px solid ${timeBillable ? '#22c55e' : 'var(--border)'}`,
+                        background: timeBillable ? 'rgba(34,197,94,0.12)' : 'transparent',
+                        color: timeBillable ? '#22c55e' : 'var(--text-muted)',
+                      }}
+                    >
+                      <span style={{ fontSize: 13 }}>💰</span> Billable
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTimeBillable(false)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                        cursor: 'pointer', transition: 'all 0.15s ease',
+                        border: `2px solid ${!timeBillable ? '#94a3b8' : 'var(--border)'}`,
+                        background: !timeBillable ? 'rgba(148,163,184,0.12)' : 'transparent',
+                        color: !timeBillable ? '#94a3b8' : 'var(--text-muted)',
+                      }}
+                    >
+                      <span style={{ fontSize: 13 }}>🚫</span> Non-billable
+                    </button>
+                  </div>
+                </div>
+
+                {/* Date picker with restriction */}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={timeDate}
+                    min={!isPrivileged ? dateNDaysAgo(7) : undefined}
+                    max={todayStr}
+                    onChange={e => setTimeDate(e.target.value)}
+                    style={{ flex: 1, borderColor: timeDateRestricted ? '#ef4444' : undefined }}
+                  />
+                  <button className="btn btn-primary" onClick={logTimeOnTask} disabled={logginTime || timeDateRestricted || totalTimeMins <= 0} style={{ whiteSpace: 'nowrap', opacity: (logginTime || timeDateRestricted || totalTimeMins <= 0) ? 0.6 : 1 }}>
+                    {logginTime ? 'Logging…' : '+ Log Time'}
+                  </button>
+                </div>
+
+                {/* Quick date chips */}
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+                  {(isPrivileged
+                    ? [{l:'Today',d:dateNDaysAgo(0)},{l:'Yesterday',d:dateNDaysAgo(1)},{l:'-3d',d:dateNDaysAgo(3)},{l:'-7d',d:dateNDaysAgo(7)},{l:'-14d',d:dateNDaysAgo(14)}]
+                    : Array.from({length:7},(_,i)=>({l:i===0?'Today':i===1?'Yesterday':`-${i}d`,d:dateNDaysAgo(i)}))
+                  ).map(({l,d}) => (
+                    <button key={d} type="button" onClick={() => setTimeDate(d)} style={{ padding:'2px 8px', borderRadius:20, fontSize:10, fontWeight:700, cursor:'pointer', border:`1px solid ${timeDate===d?'#6366f1':'var(--border)'}`, background:timeDate===d?'rgba(99,102,241,0.2)':'var(--bg-card)', color:timeDate===d?'#6366f1':'var(--text-muted)', transition:'all 0.15s' }}>{l}</button>
+                  ))}
+                </div>
+
+                {timeDateRestricted && (
+                  <div style={{ padding:'8px 10px', borderRadius:8, background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', fontSize:11, color:'#ef4444' }}>
+                    ⚠️ Team members can only log time within the past 7 days. Contact a manager or admin for older entries.
+                  </div>
+                )}
+                {!isPrivileged && (
+                  <div style={{ fontSize:10, color:'var(--text-muted)', marginTop:4 }}>🔒 Restricted to past 7 days</div>
+                )}
+
+                {editTask.time_estimate_minutes && (
+                  <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)', display: 'flex', gap: 16 }}>
+                    <span>📐 Estimate: <b style={{ color: 'var(--text-primary)' }}>{fmtDuration(editTask.time_estimate_minutes)}</b></span>
+                    <span>⏱ Spent: <b style={{ color: '#6366f1' }}>{fmtDuration(editTask.time_spent_minutes || 0)}</b></span>
+                  </div>
+                )}
+              </div>
+
+              {/* Entries List */}
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>History ({taskTimeEntries.length})</div>
+              {taskTimeEntries.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, padding: '20px 0' }}>No time logged yet</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 240, overflowY: 'auto' }}>
+                  {taskTimeEntries.map(te => (
+                    <div key={te.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--bg-card)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 80 }}>
+                        {new Date(te.logged_date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                      </span>
+                      <span style={{ background: 'rgba(99,102,241,0.15)', color: '#6366f1', borderRadius: 10, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
+                        {fmtDuration(te.duration_minutes)}
+                      </span>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 3,
+                        padding: '2px 6px',
+                        borderRadius: 10,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        background: te.is_billable ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.12)',
+                        color: te.is_billable ? '#22c55e' : '#94a3b8',
+                        border: `1px solid ${te.is_billable ? 'rgba(34,197,94,0.2)' : 'rgba(148,163,184,0.2)'}`,
+                      }}>
+                        {te.is_billable ? '💰' : '🚫'}
+                      </span>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)', flex: 1 }}>{te.description || '—'}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{(te.user as any)?.full_name || 'You'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ marginTop: 12, textAlign: 'right' }}>
+                <a href="/time-tracker" style={{ fontSize: 12, color: '#6366f1', textDecoration: 'none' }}>View all in Time Tracker →</a>
+              </div>
+            </div>
+            )}
+
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={saveTask}>{editTask ? 'Update' : 'Create'}</button>
+              {modalTab === 'details' && (
+                <>
+                  <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                  <button className="btn btn-primary" onClick={saveTask}>{editTask ? 'Update' : 'Create'}</button>
+                </>
+              )}
+              {modalTab === 'time' && (
+                <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Close</button>
+              )}
             </div>
           </motion.div>
         </motion.div>

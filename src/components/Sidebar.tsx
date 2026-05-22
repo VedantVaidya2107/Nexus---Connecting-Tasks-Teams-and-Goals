@@ -10,6 +10,7 @@ const NAV_ITEMS = [
     { label: 'My Tasks', href: '/my-tasks', icon: '✅' },
     { label: 'All Tasks', href: '/tasks', icon: '📋' },
     { label: 'Projects', href: '/projects', icon: '📁' },
+    { label: 'Time Tracker', href: '/time-tracker', icon: '⏱️' },
   ]},
   { section: 'Collaborate', items: [
     { label: 'Team', href: '/team', icon: '👥' },
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   ]},
   { section: 'Admin', items: [
     { label: 'Team Management', href: '/team/manage', icon: '🛡️' },
+    { label: 'Time Analytics', href: '/admin/time-analytics', icon: '📊' },
   ]},
 ];
 
@@ -46,13 +48,15 @@ export default function Sidebar() {
 
       <nav className="sidebar-nav">
         {NAV_ITEMS
-          .filter(s => s.section !== 'Admin' || profile?.role === 'admin')
+          .filter(s => s.section !== 'Admin' || profile?.role === 'admin' || profile?.role === 'manager')
           .map(section => {
             const filteredItems = section.items.filter(item => {
               // Members cannot see global lists or reports
               if (profile?.role === 'team_member') {
                 if (item.label === 'All Tasks' || item.label === 'Reports') return false;
               }
+              // Team Management is admin-only; Time Analytics is admin + manager
+              if (item.label === 'Team Management' && profile?.role !== 'admin') return false;
               return true;
             });
 

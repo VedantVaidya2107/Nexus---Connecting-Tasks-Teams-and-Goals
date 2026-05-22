@@ -5,17 +5,26 @@ import AppLayout from '@/components/AppLayout';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { TASK_STATUS_CONFIG, TASK_PRIORITY_CONFIG } from '@/lib/types';
-import type { Task, Profile, Project } from '@/lib/types';
+import type { Task, Profile, Project, TimeEntry } from '@/lib/types';
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend);
+
+function fmtDuration(mins: number) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
 
 export default function ReportsPage() {
   const { user, profile } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Profile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -30,15 +39,22 @@ export default function ReportsPage() {
       memberQuery = memberQuery.eq('id', user.id);
     }
 
-    const [tRes, mRes, pRes] = await Promise.all([
+    let timeQuery = supabase.from('time_entries').select('*, user:profiles(id,full_name), task:tasks(id,title,project_id)');
+    if (profile.role === 'team_member') {
+      timeQuery = timeQuery.eq('user_id', user.id);
+    }
+
+    const [tRes, mRes, pRes, teRes] = await Promise.all([
       taskQuery,
       memberQuery,
       supabase.from('projects').select('*'),
+      timeQuery,
     ]);
     
     if (tRes.data) setTasks(tRes.data as Task[]);
     if (mRes.data) setMembers(mRes.data as Profile[]);
     if (pRes.data) setProjects(pRes.data as Project[]);
+    if (teRes.data) setTimeEntries(teRes.data as TimeEntry[]);
     setLoading(false);
   }, [user, profile]);
 
@@ -178,6 +194,98 @@ export default function ReportsPage() {
               </tr>
             ))}
             {projectSummary.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No projects</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      {/* Time Summary Section */}
+      <div className="glass-card" style={{ padding: '24px', marginBottom: '24px' }}>
+        <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          ⏱ Time Summary
+          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)' }}>— hours logged across all tasks</span>
+        </h3>
+
+        {/* Time KPIs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 24 }}>
+          {[
+            { label: 'Total Hours Logged', value: fmtDuration(timeEntries.reduce((s,e) => s + e.duration_minutes, 0)), color: '#6366f1' },
+            { label: 'Entries Count', value: String(timeEntries.length), color: '#06b6d4' },
+            { label: 'Avg per Entry', value: timeEntries.length > 0 ? fmtDuration(Math.round(timeEntries.reduce((s,e) => s+e.duration_minutes,0)/timeEntries.length)) : '—', color: '#22c55e' },
+          ].map(k => (
+            <div key={k.label} style={{ padding: '14px 16px', borderRadius: 10, background: k.color + '14', border: `1px solid ${k.color}30` }}>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>{k.label}</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: k.color }}>{k.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Hours by Member Bar Chart */}
+        {profile?.role !== 'team_member' && members.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Hours by Member</div>
+            <div style={{ height: 180 }}>
+              <Bar
+                data={{
+                  labels: members.slice(0, 10).map(m => m.full_name?.split(' ')[0] || 'User'),
+                  datasets: [{
+                    label: 'Hours Logged',
+                    data: members.slice(0, 10).map(m =>
+                      Math.round(timeEntries.filter(e => e.user_id === m.id).reduce((s,e) => s+e.duration_minutes,0) / 60 * 10) / 10
+                    ),
+                    backgroundColor: 'rgba(99,102,241,0.5)',
+                    borderColor: '#6366f1',
+                    borderWidth: 1, borderRadius: 6,
+                  }],
+                }}
+                options={{
+                  responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    x: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' }, title: { display: true, text: 'Hours', color: '#64748b', font: { size: 11 } } },
+                    y: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                  },
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Time by Project */}
+        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Time by Project</div>
+        <table className="data-table">
+          <thead><tr><th>Project</th><th>Hours Logged</th><th>Entries</th><th>Distribution</th></tr></thead>
+          <tbody>
+            {(() => {
+              const totalTime = timeEntries.reduce((s,e)=>s+e.duration_minutes,0);
+              const projectTime = projects.map(p => {
+                const pEntries = timeEntries.filter(e => (e.task as any)?.project_id === p.id);
+                const pMins = pEntries.reduce((s,e)=>s+e.duration_minutes,0);
+                return { ...p, mins: pMins, count: pEntries.length, pct: totalTime>0?Math.round(pMins/totalTime*100):0 };
+              }).filter(p => p.mins > 0).sort((a,b) => b.mins - a.mins);
+              const unlinked = timeEntries.filter(e => !(e.task as any)?.project_id);
+              const unlinkedMins = unlinked.reduce((s,e)=>s+e.duration_minutes,0);
+              return [
+                ...projectTime.map(p => (
+                  <tr key={p.id}>
+                    <td style={{ fontWeight: 600 }}><span style={{ width:8, height:8, borderRadius:'50%', background:p.color, display:'inline-block', marginRight:8 }} />{p.name}</td>
+                    <td style={{ fontWeight: 700, color: '#6366f1' }}>{fmtDuration(p.mins)}</td>
+                    <td style={{ color:'var(--text-muted)' }}>{p.count}</td>
+                    <td style={{ minWidth:120 }}>
+                      <div className="progress-bar"><div className="fill" style={{ width:`${p.pct}%`, background:'#6366f1' }} /></div>
+                      <span style={{fontSize:11,color:'var(--text-muted)'}}>{p.pct}%</span>
+                    </td>
+                  </tr>
+                )),
+                unlinkedMins > 0 && (
+                  <tr key="unlinked">
+                    <td style={{ color:'var(--text-muted)' }}>No project</td>
+                    <td style={{ fontWeight:700, color:'#6366f1' }}>{fmtDuration(unlinkedMins)}</td>
+                    <td style={{ color:'var(--text-muted)' }}>{unlinked.length}</td>
+                    <td><div className="progress-bar"><div className="fill" style={{ width:`${totalTime>0?Math.round(unlinkedMins/totalTime*100):0}%`, background:'#94a3b8' }} /></div></td>
+                  </tr>
+                ),
+              ];
+            })()}
+            {timeEntries.length === 0 && <tr><td colSpan={4} style={{ textAlign:'center', color:'var(--text-muted)' }}>No time entries yet</td></tr>}
           </tbody>
         </table>
       </div>

@@ -69,6 +69,21 @@ export interface Task {
   subtasks?: Task[];
 }
 
+export interface TimeEntry {
+  id: string;
+  task_id: string;
+  user_id: string;
+  duration_minutes: number;
+  description: string | null;
+  logged_date: string;
+  is_billable: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  user?: Profile;
+  task?: Task;
+}
+
 export interface Comment {
   id: string;
   task_id: string;

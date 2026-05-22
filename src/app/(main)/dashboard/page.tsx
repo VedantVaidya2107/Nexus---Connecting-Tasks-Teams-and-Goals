@@ -22,7 +22,8 @@ import {
   Users, 
   CheckCircle2, 
   XCircle, 
-  TrendingUp 
+  TrendingUp,
+  Timer,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -58,6 +59,7 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activities, setActivities] = useState<(ActivityLog & { user?: Profile })[]>([]);
   const [members, setMembers] = useState<Profile[]>([]);
+  const [todayTimeMinutes, setTodayTimeMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filterUser, setFilterUser] = useState<string>('all');
@@ -77,15 +79,28 @@ export default function DashboardPage() {
         tasksQuery = tasksQuery.eq('assignee_id', profile.id);
       }
 
-      const [tasksRes, actRes, membersRes] = await Promise.all([
+      const today = new Date().toISOString().split('T')[0];
+      let timeQuery = supabase
+        .from('time_entries')
+        .select('duration_minutes')
+        .eq('logged_date', today);
+      if (profile.role === 'team_member') {
+        timeQuery = timeQuery.eq('user_id', profile.id);
+      }
+
+      const [tasksRes, actRes, membersRes, timeRes] = await Promise.all([
         tasksQuery,
         supabase.from('activity_log').select('*, user:profiles(*)').order('created_at', { ascending: false }).limit(15),
         supabase.from('profiles').select('*').eq('is_active', true),
+        timeQuery,
       ]);
       
       if (tasksRes.data) setTasks(tasksRes.data as Task[]);
       if (actRes.data) setActivities(actRes.data as (ActivityLog & { user?: Profile })[]);
       if (membersRes.data) setMembers(membersRes.data as Profile[]);
+      if (timeRes.data) {
+        setTodayTimeMinutes(timeRes.data.reduce((s: number, e: any) => s + (e.duration_minutes || 0), 0));
+      }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
@@ -146,6 +161,15 @@ export default function DashboardPage() {
     { label: 'Awaiting Team', value: statusCounts['awaiting_team'] || 0, icon: Users, color: 'var(--amber)', href: '/tasks?status=awaiting_team', trend: 'Internal Review' },
     { label: 'Done', value: completed, icon: CheckCircle2, color: 'var(--green)', href: '/tasks?status=done', trend: `${completionRate}% Success Rate` },
     { label: 'Cancelled', value: statusCounts['cancelled'] || 0, icon: XCircle, color: 'var(--red)', href: '/tasks?status=cancelled', trend: 'Deprioritized' },
+    {
+      label: 'Hours Today',
+      value: todayTimeMinutes > 0 ? Math.floor(todayTimeMinutes / 60) : 0,
+      valueSuffix: todayTimeMinutes > 0 ? `h ${todayTimeMinutes % 60}m` : 'h',
+      icon: Timer,
+      color: '#6366f1',
+      href: '/time-tracker',
+      trend: todayTimeMinutes > 0 ? `${todayTimeMinutes}min logged` : 'Start tracking'
+    },
   ];
 
   const statusChartData = {
@@ -353,8 +377,12 @@ export default function DashboardPage() {
 
               <div style={{ position: 'relative', zIndex: 1 }}>
                 <div className="kpi-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{kpi.label}</div>
-                <div className="kpi-value" style={{ fontSize: '36px', fontWeight: 900, margin: '8px 0', color: 'var(--text-primary)' }}><Counter value={kpi.value} /></div>
+                <div className="kpi-value" style={{ fontSize: '36px', fontWeight: 900, margin: '8px 0', color: 'var(--text-primary)' }}>
+                  <Counter value={kpi.value} />
+                  {(kpi as any).valueSuffix && <span style={{ fontSize: '18px', fontWeight: 700, color: kpiColor, marginLeft: 2 }}>{(kpi as any).valueSuffix}</span>}
+                </div>
               </div>
+
 
               <div className="kpi-hint" style={{ 
                 marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', 
