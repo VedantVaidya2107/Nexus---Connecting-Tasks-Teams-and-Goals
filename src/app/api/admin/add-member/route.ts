@@ -1,5 +1,6 @@
 import { apiResponse } from '@/lib/api-response';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { sendWelcomeEmail } from '@/lib/mail';
 
 export async function POST(request: Request) {
   try {
@@ -48,14 +49,8 @@ export async function POST(request: Request) {
     // 4. Send welcome email with temporary password
     let emailSent = false;
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const emailRes = await fetch(`${baseUrl}/api/auth/send-welcome-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, fullName, temporaryPassword: password }),
-      });
-      const emailData = await emailRes.json();
-      if (emailRes.ok && emailData.success && emailData.data?.sent) {
+      const emailResult = await sendWelcomeEmail(email, fullName, password);
+      if (emailResult.sent) {
         emailSent = true;
       }
     } catch (emailError) {
