@@ -4,10 +4,9 @@ import { processUserQuery } from '@/lib/ai/gemini';
 import { createTimeEntry, updateTimeEntry, deleteTimeEntry } from '@/actions/timeEntries';
 
 // Admin client for executing bot actions
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabaseAdmin = (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
+  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null as any;
 
 export async function POST(req: NextRequest) {
   try {
