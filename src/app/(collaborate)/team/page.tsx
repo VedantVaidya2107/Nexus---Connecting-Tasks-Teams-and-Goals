@@ -51,7 +51,7 @@ export default function TeamPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
         {members.map((m, index) => {
           const mTasks = tasks.filter(t => t.assignee_id === m.id);
-          const done = mTasks.filter(t => t.status === 'completed').length;
+          const done = mTasks.filter(t => t.status === 'done').length;
           const inProg = mTasks.filter(t => t.status === 'in_progress').length;
           const rate = mTasks.length > 0 ? Math.round((done / mTasks.length) * 100) : 0;
           const initials = m.full_name ? m.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '??';
