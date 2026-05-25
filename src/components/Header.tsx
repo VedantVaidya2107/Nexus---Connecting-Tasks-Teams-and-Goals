@@ -54,7 +54,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
       .eq('is_read', false)
       .order('created_at', { ascending: false })
       .limit(10)
-      .then(({ data }) => { if (data) setNotifications(data as Notification[]); });
+      .then((res: any) => { if (res.data) setNotifications(res.data as Notification[]); });
   }, [user]);
 
   const markRead = async (id: string) => {
