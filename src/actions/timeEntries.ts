@@ -23,6 +23,44 @@ export async function createTimeEntry(
       return { success: false, message: 'Duration must be greater than 0' };
     }
 
+    // Ensure description is mandatory
+    if (!data.description || !data.description.trim()) {
+      return { success: false, message: 'Description is required' };
+    }
+
+    // Prevent duplicate entries for the same task (or standalone entries with the same description) on the same date by the same user
+    if (data.task_id) {
+      const { data: existing } = await supabaseAdmin
+        .from('time_entries')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('task_id', data.task_id)
+        .eq('logged_date', data.logged_date)
+        .maybeSingle();
+
+      if (existing) {
+        return {
+          success: false,
+          message: 'A time entry already exists for this task on this date. You can edit the existing entry instead.',
+        };
+      }
+    } else {
+      const { data: existing } = await supabaseAdmin
+        .from('time_entries')
+        .select('id')
+        .eq('user_id', userId)
+        .is('task_id', null)
+        .eq('logged_date', data.logged_date)
+        .maybeSingle();
+
+      if (existing) {
+        return {
+          success: false,
+          message: 'A standalone time entry already exists on this date. You can edit the existing entry instead.',
+        };
+      }
+    }
+
     const { data: entry, error } = await supabaseAdmin
       .from('time_entries')
       .insert({
@@ -90,6 +128,46 @@ export async function updateTimeEntry(
   taskId: string | null
 ) {
   try {
+    // Ensure description is mandatory
+    if (!data.description || !data.description.trim()) {
+      return { success: false, message: 'Description is required' };
+    }
+
+    // Prevent duplicate entries for the same task (or standalone entries with the same description) on the same date by the same user (excluding this entry itself)
+    if (taskId) {
+      const { data: existing } = await supabaseAdmin
+        .from('time_entries')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('task_id', taskId)
+        .eq('logged_date', data.logged_date)
+        .neq('id', id)
+        .maybeSingle();
+
+      if (existing) {
+        return {
+          success: false,
+          message: 'A time entry already exists for this task on this date. You can edit the existing entry instead.',
+        };
+      }
+    } else {
+      const { data: existing } = await supabaseAdmin
+        .from('time_entries')
+        .select('id')
+        .eq('user_id', userId)
+        .is('task_id', null)
+        .eq('logged_date', data.logged_date)
+        .neq('id', id)
+        .maybeSingle();
+
+      if (existing) {
+        return {
+          success: false,
+          message: 'A standalone time entry already exists on this date. You can edit the existing entry instead.',
+        };
+      }
+    }
+
     const updatePayload: any = {
       duration_minutes: data.duration_minutes,
       description: data.description || null,

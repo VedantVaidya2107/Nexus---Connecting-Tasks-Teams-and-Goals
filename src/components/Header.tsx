@@ -62,6 +62,15 @@ export default function Header({ title, subtitle }: HeaderProps) {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleGlobalRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      window.location.reload();
+    }, 600);
+  };
+
   return (
     <header className={`header ${isScrolled ? 'scrolled' : ''}`} style={isScrolled ? { background: 'rgba(8, 13, 26, 0.9)', borderBottom: '1px solid rgba(124, 58, 237, 0.2)' } : { transition: 'all 0.3s ease' }}>
       <div className="header-left">
@@ -80,6 +89,13 @@ export default function Header({ title, subtitle }: HeaderProps) {
             onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
+
+        <button className="icon-btn" onClick={handleGlobalRefresh} disabled={isRefreshing} title="Refresh All Data">
+          <span style={{ 
+            display: 'inline-block', 
+            animation: isRefreshing ? 'spin 0.6s linear infinite' : 'none' 
+          }}>🔄</span>
+        </button>
 
         <button className="icon-btn" onClick={toggleTheme} title="Toggle Theme">
           {theme === 'dark' ? '☀️' : '🌙'}

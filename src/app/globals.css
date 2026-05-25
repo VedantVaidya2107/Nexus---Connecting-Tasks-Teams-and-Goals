@@ -406,7 +406,7 @@ input, textarea, select { font-family: inherit; color: inherit; }
 }
 
 .kpi-card {
-  padding: 32px 28px;
+  padding: 16px 20px;
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -436,7 +436,7 @@ input, textarea, select { font-family: inherit; color: inherit; }
 }
 
 .kpi-card {
-  padding: 24px;
+  padding: 16px 20px;
   position: relative; overflow: hidden;
 }
 .kpi-card::before {
@@ -455,8 +455,8 @@ input, textarea, select { font-family: inherit; color: inherit; }
   font-size: 20px; margin-bottom: 16px;
 }
 
-.kpi-card .kpi-label { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; font-weight: 500; }
-.kpi-card .kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+.kpi-card .kpi-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+.kpi-card .kpi-value { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
 .kpi-card .kpi-change {
   font-size: 12px; font-weight: 600;
   display: flex; align-items: center; gap: 4px;

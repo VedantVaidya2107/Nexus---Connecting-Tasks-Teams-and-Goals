@@ -27,6 +27,8 @@ export default function ReportsPage() {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
+
+
   const fetchData = useCallback(async () => {
     if (!user || !profile) return;
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { processUserQuery } from '@/lib/ai/gemini';
+import { createTimeEntry, updateTimeEntry, deleteTimeEntry } from '@/actions/timeEntries';
 
 // Admin client for executing bot actions
 const supabaseAdmin = createClient(
@@ -81,6 +82,55 @@ export async function POST(req: NextRequest) {
     } else if (aiResponse.action === 'assign_task' && aiResponse.data) {
       const { task_id, assignee_id } = aiResponse.data;
       await supabaseAdmin.from('tasks').update({ assignee_id }).eq('id', task_id);
+    } else if (aiResponse.action === 'create_time_entry' && aiResponse.data) {
+      const { task_id, duration_minutes, description, logged_date, is_billable } = aiResponse.data;
+      await createTimeEntry({
+        task_id: task_id || null,
+        duration_minutes: Number(duration_minutes) || 0,
+        description: description || null,
+        logged_date: logged_date || new Date().toISOString().split('T')[0],
+        is_billable: is_billable !== undefined ? is_billable : true
+      }, user.id);
+    } else if (aiResponse.action === 'update_time_entry' && aiResponse.data) {
+      const { id, duration_minutes, description, logged_date, is_billable } = aiResponse.data;
+      if (id) {
+        const { data: existing } = await supabaseAdmin
+          .from('time_entries')
+          .select('duration_minutes, task_id')
+          .eq('id', id)
+          .single();
+        if (existing) {
+          await updateTimeEntry(
+            id,
+            {
+              duration_minutes: duration_minutes !== undefined ? Number(duration_minutes) : existing.duration_minutes,
+              description: description !== undefined ? description : null,
+              logged_date: logged_date || new Date().toISOString().split('T')[0],
+              is_billable: is_billable !== undefined ? is_billable : true
+            },
+            user.id,
+            existing.duration_minutes,
+            existing.task_id
+          );
+        }
+      }
+    } else if (aiResponse.action === 'delete_time_entry' && aiResponse.data) {
+      const { id } = aiResponse.data;
+      if (id) {
+        const { data: existing } = await supabaseAdmin
+          .from('time_entries')
+          .select('duration_minutes, task_id')
+          .eq('id', id)
+          .single();
+        if (existing) {
+          await deleteTimeEntry(
+            id,
+            user.id,
+            existing.duration_minutes,
+            existing.task_id
+          );
+        }
+      }
     }
 
     // 6. Save AI response

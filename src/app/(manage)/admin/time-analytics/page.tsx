@@ -49,7 +49,6 @@ export default function TimeAnalyticsPage() {
   const [members, setMembers] = useState<Profile[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
   // Filters
   const now = new Date();
@@ -87,18 +86,7 @@ export default function TimeAnalyticsPage() {
     }
   }, []);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    const toastId = toast.loading('Refreshing analytics data...');
-    try {
-      await fetchAll(true);
-      toast.success('Analytics data updated', { id: toastId });
-    } catch (err: any) {
-      toast.error('Failed to refresh data: ' + err.message, { id: toastId });
-    } finally {
-      setRefreshing(false);
-    }
-  };
+
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -343,40 +331,7 @@ export default function TimeAnalyticsPage() {
           </h1>
           <div className="subtitle">Billable &amp; non-billable hours across team, projects and time</div>
         </div>
-        <div className="page-actions">
-          <button 
-            className="btn btn-secondary" 
-            onClick={handleRefresh} 
-            disabled={refreshing}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 8, 
-              padding: '8px 16px', 
-              fontSize: 13, 
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              opacity: refreshing ? 0.7 : 1
-            }}
-          >
-            <motion.svg
-              animate={refreshing ? { rotate: 360 } : { rotate: 0 }}
-              transition={refreshing ? { repeat: Infinity, duration: 1.2, ease: "linear" } : { duration: 0.5 }}
-              width="14" 
-              height="14" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2.5" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-            >
-              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-            </motion.svg>
-            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-          </button>
-        </div>
+
       </div>
 
       {/* ── Filter Bar ── */}
@@ -440,11 +395,11 @@ export default function TimeAnalyticsPage() {
           <motion.div key={kpi.label} className="glass-card"
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.06, duration: 0.4 }}
-            style={{ padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: -8, right: -8, fontSize: 56, opacity: 0.08 }}>{kpi.icon}</div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{kpi.label}</div>
-            <div style={{ fontSize: 28, fontWeight: 900, color: kpi.color, lineHeight: 1 }}>{kpi.value}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{kpi.sub}</div>
+            style={{ padding: '14px 18px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: -6, right: -6, fontSize: 44, opacity: 0.08 }}>{kpi.icon}</div>
+            <div style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{kpi.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: kpi.color, lineHeight: 1 }}>{kpi.value}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>{kpi.sub}</div>
             {/* Color accent bar */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: kpi.color, opacity: 0.5, borderRadius: '0 0 12px 12px' }} />
           </motion.div>

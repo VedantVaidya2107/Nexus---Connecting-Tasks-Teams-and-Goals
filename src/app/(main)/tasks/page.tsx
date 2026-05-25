@@ -48,12 +48,9 @@ export default function TasksPage() {
 
   // Time entry state
   const [taskTimeEntries, setTaskTimeEntries] = useState<TimeEntry[]>([]);
-  const [timeHours, setTimeHours] = useState('');
-  const [timeMins, setTimeMins] = useState('');
   const [timeDesc, setTimeDesc] = useState('');
   const [timeDate, setTimeDate] = useState(new Date().toISOString().split('T')[0]);
   const [logginTime, setLogginTime] = useState(false);
-  const [timeDurationMode, setTimeDurationMode] = useState<'range' | 'manual'>('range');
   const [timeFromTime, setTimeFromTime] = useState('09:00');
   const [timeToTime, setTimeToTime] = useState('');
   const [timeBillable, setTimeBillable] = useState(true);
@@ -71,15 +68,12 @@ export default function TasksPage() {
   };
   const minsToTimeUtil = (m: number) => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
   const computedRangeMinsTask = (() => {
-    if (timeDurationMode !== 'range') return null;
     const from = timeToMinsUtil(timeFromTime);
     const to = timeToMinsUtil(timeToTime);
     if (from === null || to === null || to <= from) return null;
     return to - from;
   })();
-  const totalTimeMins = timeDurationMode === 'range'
-    ? (computedRangeMinsTask ?? 0)
-    : ((parseInt(timeHours) || 0) * 60 + (parseInt(timeMins) || 0));
+  const totalTimeMins = computedRangeMinsTask ?? 0;
   const timeDateDaysAgo = (() => { const now = new Date(); now.setHours(0,0,0,0); const d = new Date(timeDate); d.setHours(0,0,0,0); return Math.round((now.getTime()-d.getTime())/(86400000)); })();
   const timeDateRestricted = !isPrivileged && timeDateDaysAgo > 7;
 
@@ -140,9 +134,14 @@ export default function TasksPage() {
     setFormAssignee(t.assignee_id || ''); setFormProject(t.project_id || '');
     setFormDueDate(t.due_date || '');
     setModalTab('details');
-    setTimeHours(''); setTimeMins(''); setTimeDesc('');
+    
+    // Reset quick log fields
+    setTimeDesc('');
+    setTimeFromTime('09:00');
+    setTimeToTime('');
+    setTimeBillable(true);
     setTimeDate(new Date().toISOString().split('T')[0]);
-    setTimeDurationMode('range'); setTimeFromTime('09:00'); setTimeToTime(''); setTimeBillable(true);
+
     // Fetch time entries for this task
     const { data } = await supabase
       .from('time_entries')
@@ -157,14 +156,19 @@ export default function TasksPage() {
     if (!editTask) return;
     if (timeDateRestricted) { toast.error('Team members can only log time within the past 7 days'); return; }
     if (timeDateDaysAgo < 0) { toast.error('Cannot log time for a future date'); return; }
-    if (timeDurationMode === 'range') {
-      const from = timeToMinsUtil(timeFromTime);
-      const to = timeToMinsUtil(timeToTime);
-      if (from === null) { toast.error('Invalid start time'); return; }
-      if (to === null) { toast.error('Invalid end time'); return; }
-      if (to <= from) { toast.error('End time must be after start time'); return; }
-    }
+    
+    const from = timeToMinsUtil(timeFromTime);
+    const to = timeToMinsUtil(timeToTime);
+    if (from === null) { toast.error('Invalid start time'); return; }
+    if (to === null) { toast.error('Invalid end time'); return; }
+    if (to <= from) { toast.error('End time must be after start time'); return; }
+    
     if (totalTimeMins <= 0) { toast.error('Duration must be at least 1 minute'); return; }
+    
+    if (!timeDesc.trim()) {
+      toast.error('Description is required');
+      return;
+    }
     setLogginTime(true);
     const res = await createTimeEntry(
       { task_id: editTask.id, duration_minutes: totalTimeMins, description: timeDesc.trim() || null, logged_date: timeDate, is_billable: timeBillable },
@@ -173,7 +177,7 @@ export default function TasksPage() {
     setLogginTime(false);
     if (!res.success) { toast.error(res.message || 'Error'); return; }
     toast.success('Time logged');
-    setTimeHours(''); setTimeMins(''); setTimeDesc(''); setTimeFromTime('09:00'); setTimeToTime('');
+    setTimeDesc(''); setTimeFromTime('09:00'); setTimeToTime('');
     // Refresh entries
     const { data } = await supabase
       .from('time_entries')
@@ -513,60 +517,37 @@ export default function TasksPage() {
               <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 12, padding: '16px', marginBottom: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#6366f1' }}>⏱ Quick Log</div>
-                  <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', fontSize: 10 }}>
-                    <button type="button" onClick={() => setTimeDurationMode('range')} style={{ padding: '3px 10px', fontWeight: 700, cursor: 'pointer', border: 'none', background: timeDurationMode === 'range' ? '#6366f1' : 'transparent', color: timeDurationMode === 'range' ? '#fff' : 'var(--text-muted)', transition: 'all 0.15s' }}>⏰ From–To</button>
-                    <button type="button" onClick={() => setTimeDurationMode('manual')} style={{ padding: '3px 10px', fontWeight: 700, cursor: 'pointer', border: 'none', background: timeDurationMode === 'manual' ? '#6366f1' : 'transparent', color: timeDurationMode === 'manual' ? '#fff' : 'var(--text-muted)', transition: 'all 0.15s' }}>🔢 Manual</button>
-                  </div>
                 </div>
 
                 {/* From–To mode */}
-                {timeDurationMode === 'range' && (
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 3, textTransform: 'uppercase' }}>FROM</div>
-                        <input className="form-input" type="time" value={timeFromTime} onChange={e => setTimeFromTime(e.target.value)} style={{ fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }} />
-                      </div>
-                      <span style={{ fontSize: 18, color: 'var(--text-muted)', paddingTop: 16 }}>→</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 3, textTransform: 'uppercase' }}>TO</div>
-                        <input className="form-input" type="time" value={timeToTime} onChange={e => setTimeToTime(e.target.value)} style={{ fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }} />
-                      </div>
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 3, textTransform: 'uppercase' }}>FROM</div>
+                      <input className="form-input" type="time" value={timeFromTime} onChange={e => setTimeFromTime(e.target.value)} style={{ fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }} />
                     </div>
-                    {computedRangeMinsTask && computedRangeMinsTask > 0 ? (
-                      <div style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', fontSize: 12, color: '#6366f1', fontWeight: 700 }}>
-                        ⏱ {fmtDuration(computedRangeMinsTask)} ({computedRangeMinsTask}min)
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', padding: '4px 0' }}>Set end time to see duration</div>
-                    )}
-                    <div style={{ marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {[{l:'30m',m:30},{l:'1h',m:60},{l:'2h',m:120},{l:'4h',m:240}].map(({l,m}) => (
-                        <button key={l} type="button" onClick={() => { const f = timeToMinsUtil(timeFromTime) ?? 9*60; setTimeFromTime(minsToTimeUtil(f)); setTimeToTime(minsToTimeUtil(f+m)); }}
-                          style={{ padding:'2px 8px', borderRadius:20, fontSize:10, fontWeight:700, cursor:'pointer', border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text-muted)' }}>{l}</button>
-                      ))}
+                    <span style={{ fontSize: 18, color: 'var(--text-muted)', paddingTop: 16 }}>→</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 3, textTransform: 'uppercase' }}>TO</div>
+                      <input className="form-input" type="time" value={timeToTime} onChange={e => setTimeToTime(e.target.value)} style={{ fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }} />
                     </div>
                   </div>
-                )}
-
-                {/* Manual mode */}
-                {timeDurationMode === 'manual' && (
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                      <div style={{ position: 'relative' }}>
-                        <input className="form-input" type="number" min="0" placeholder="0" value={timeHours} onChange={e => setTimeHours(e.target.value)} style={{ paddingRight: 28, fontWeight: 700, textAlign: 'center' }} />
-                        <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)' }}>h</span>
-                      </div>
-                      <div style={{ position: 'relative' }}>
-                        <input className="form-input" type="number" min="0" max="59" placeholder="0" value={timeMins} onChange={e => setTimeMins(e.target.value)} style={{ paddingRight: 28, fontWeight: 700, textAlign: 'center' }} />
-                        <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)' }}>m</span>
-                      </div>
+                  {computedRangeMinsTask && computedRangeMinsTask > 0 ? (
+                    <div style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', fontSize: 12, color: '#6366f1', fontWeight: 700 }}>
+                      ⏱ {fmtDuration(computedRangeMinsTask)} ({computedRangeMinsTask}min)
                     </div>
-                    {totalTimeMins > 0 && <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: '#6366f1' }}>= {fmtDuration(totalTimeMins)}</div>}
+                  ) : (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', padding: '4px 0' }}>Set end time to see duration</div>
+                  )}
+                  <div style={{ marginTop: 6, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {[{l:'30m',m:30},{l:'1h',m:60},{l:'2h',m:120},{l:'4h',m:240}].map(({l,m}) => (
+                      <button key={l} type="button" onClick={() => { const f = timeToMinsUtil(timeFromTime) ?? 9*60; setTimeFromTime(minsToTimeUtil(f)); setTimeToTime(minsToTimeUtil(f+m)); }}
+                        style={{ padding:'2px 8px', borderRadius:20, fontSize:10, fontWeight:700, cursor:'pointer', border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text-muted)' }}>{l}</button>
+                    ))}
                   </div>
-                )}
+                </div>
 
-                <input className="form-input" placeholder="What did you work on? (optional)" value={timeDesc} onChange={e => setTimeDesc(e.target.value)} style={{ marginBottom: 10 }} />
+                <input className="form-input" placeholder="What did you work on? *" value={timeDesc} onChange={e => setTimeDesc(e.target.value)} style={{ marginBottom: 10 }} />
 
                 {/* Billing Type selection */}
                 <div style={{ marginBottom: 10 }}>

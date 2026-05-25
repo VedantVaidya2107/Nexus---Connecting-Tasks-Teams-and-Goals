@@ -24,6 +24,8 @@ import {
   XCircle, 
   TrendingUp,
   Timer,
+  Coins,
+  Ban,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -60,6 +62,8 @@ export default function DashboardPage() {
   const [activities, setActivities] = useState<(ActivityLog & { user?: Profile })[]>([]);
   const [members, setMembers] = useState<Profile[]>([]);
   const [todayTimeMinutes, setTodayTimeMinutes] = useState(0);
+  const [todayBillableMinutes, setTodayBillableMinutes] = useState(0);
+  const [todayNonBillableMinutes, setTodayNonBillableMinutes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filterUser, setFilterUser] = useState<string>('all');
@@ -82,7 +86,7 @@ export default function DashboardPage() {
       const today = new Date().toISOString().split('T')[0];
       let timeQuery = supabase
         .from('time_entries')
-        .select('duration_minutes')
+        .select('duration_minutes, is_billable')
         .eq('logged_date', today);
       if (profile.role === 'team_member') {
         timeQuery = timeQuery.eq('user_id', profile.id);
@@ -99,7 +103,18 @@ export default function DashboardPage() {
       if (actRes.data) setActivities(actRes.data as (ActivityLog & { user?: Profile })[]);
       if (membersRes.data) setMembers(membersRes.data as Profile[]);
       if (timeRes.data) {
-        setTodayTimeMinutes(timeRes.data.reduce((s: number, e: any) => s + (e.duration_minutes || 0), 0));
+        const data = timeRes.data as { duration_minutes: number; is_billable: boolean }[];
+        const totalMin = data.reduce((s: number, e: any) => s + (e.duration_minutes || 0), 0);
+        const billableMin = data.filter((e: any) => e.is_billable).reduce((s: number, e: any) => s + (e.duration_minutes || 0), 0);
+        const nonBillableMin = totalMin - billableMin;
+        
+        setTodayTimeMinutes(totalMin);
+        setTodayBillableMinutes(billableMin);
+        setTodayNonBillableMinutes(nonBillableMin);
+      } else {
+        setTodayTimeMinutes(0);
+        setTodayBillableMinutes(0);
+        setTodayNonBillableMinutes(0);
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -161,15 +176,6 @@ export default function DashboardPage() {
     { label: 'Awaiting Team', value: statusCounts['awaiting_team'] || 0, icon: Users, color: 'var(--amber)', href: '/tasks?status=awaiting_team', trend: 'Internal Review' },
     { label: 'Done', value: completed, icon: CheckCircle2, color: 'var(--green)', href: '/tasks?status=done', trend: `${completionRate}% Success Rate` },
     { label: 'Cancelled', value: statusCounts['cancelled'] || 0, icon: XCircle, color: 'var(--red)', href: '/tasks?status=cancelled', trend: 'Deprioritized' },
-    {
-      label: 'Hours Today',
-      value: todayTimeMinutes > 0 ? Math.floor(todayTimeMinutes / 60) : 0,
-      valueSuffix: todayTimeMinutes > 0 ? `h ${todayTimeMinutes % 60}m` : 'h',
-      icon: Timer,
-      color: '#6366f1',
-      href: '/time-tracker',
-      trend: todayTimeMinutes > 0 ? `${todayTimeMinutes}min logged` : 'Start tracking'
-    },
   ];
 
   const statusChartData = {
@@ -286,30 +292,14 @@ export default function DashboardPage() {
             ))}
           </select>
         )}
-        <button 
-          className="btn btn-secondary" 
-          onClick={fetchData} 
-          disabled={refreshing} 
-          title="Refresh dashboard data"
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          <RefreshCw 
-            size={16} 
-            style={{ 
-              animation: refreshing ? 'spin 1s linear infinite' : 'none',
-            }} 
-          />
-          {refreshing ? 'Refreshing...' : 'Refresh'}
-        </button>
-        <button className="btn btn-secondary" onClick={exportData} title="Export overall data">
-          📥 Export
+         <button className="btn btn-secondary" onClick={exportData} title="Export overall data">
+        📥 Export
         </button>
         <button className="btn btn-primary" onClick={() => window.location.href = '/tasks'}>
           ＋ New Task
         </button>
       </div>
-
-      <div className="kpi-grid">
+      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '24px' }}>
         {kpis.map((kpi, idx) => {
           const Icon = kpi.icon;
           const kpiColor = kpi.color;
@@ -324,6 +314,7 @@ export default function DashboardPage() {
                 cursor: kpi.value > 0 ? 'pointer' : 'default',
                 position: 'relative',
                 overflow: 'hidden',
+                padding: '16px 18px',
                 transition: 'border-color 0.5s, box-shadow 0.5s'
               }}
               onClick={() => kpi.value > 0 && (window.location.href = kpi.href)}
@@ -358,17 +349,17 @@ export default function DashboardPage() {
                   animation: 'spin 30s linear infinite'
                 }} 
               >
-                <Icon size={110} />
+                <Icon size={80} />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', position: 'relative', zIndex: 1, marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', position: 'relative', zIndex: 1, marginBottom: '12px' }}>
                 <div style={{ 
                   background: 'rgba(255,255,255,0.1)', color: '#fff', 
-                  width: '52px', height: '52px', borderRadius: '16px',
+                  width: '40px', height: '40px', borderRadius: '12px',
                   border: '1px solid rgba(255,255,255,0.2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
-                  <Icon size={26} strokeWidth={2.5} />
+                  <Icon size={20} strokeWidth={2.5} />
                 </div>
                 <div style={{ fontSize: '10px', fontWeight: 900, color: kpiColor, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
                   {kpi.trend}
@@ -376,16 +367,16 @@ export default function DashboardPage() {
               </div>
 
               <div style={{ position: 'relative', zIndex: 1 }}>
-                <div className="kpi-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{kpi.label}</div>
-                <div className="kpi-value" style={{ fontSize: '36px', fontWeight: 900, margin: '8px 0', color: 'var(--text-primary)' }}>
+                <div className="kpi-label" style={{ fontSize: '10.5px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{kpi.label}</div>
+                <div className="kpi-value" style={{ fontSize: '24px', fontWeight: 900, margin: '4px 0', color: 'var(--text-primary)' }}>
                   <Counter value={kpi.value} />
-                  {(kpi as any).valueSuffix && <span style={{ fontSize: '18px', fontWeight: 700, color: kpiColor, marginLeft: 2 }}>{(kpi as any).valueSuffix}</span>}
+                  {(kpi as any).valueSuffix && <span style={{ fontSize: '14px', fontWeight: 700, color: kpiColor, marginLeft: 2 }}>{(kpi as any).valueSuffix}</span>}
                 </div>
               </div>
 
 
               <div className="kpi-hint" style={{ 
-                marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', 
+                marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', 
                 opacity: 0, transform: 'translateY(10px)', transition: 'all 0.3s ease'
               }}>
                 <div style={{ padding: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}>
