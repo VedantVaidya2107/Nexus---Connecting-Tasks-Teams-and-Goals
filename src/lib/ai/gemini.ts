@@ -34,16 +34,16 @@ Role: ${profile?.role || 'team_member'}
 Current Date: ${new Date().toLocaleString()}
 
 TEAM CONTEXT (Available for assignment):
-${JSON.stringify(allProfiles?.map(p => ({ id: p.id, name: p.full_name, role: p.role })))}
+${JSON.stringify(allProfiles?.map((p: any) => ({ id: p.id, name: p.full_name, role: p.role })))}
 
 PROJECT CONTEXT:
-Active Projects: ${JSON.stringify(projects?.map(p => ({ id: p.id, name: p.name })))}
+Active Projects: ${JSON.stringify(projects?.map((p: any) => ({ id: p.id, name: p.name })))}
 
 TASK CONTEXT (Your tasks):
 ${JSON.stringify(tasks?.slice(0, 15))}
 
 RECENT LOGGED TIME ENTRIES (Your recent logs, use these IDs if the user wants to update or delete any of them):
-${JSON.stringify(recentTimeEntries?.map(e => ({ id: e.id, duration_minutes: e.duration_minutes, description: e.description, date: e.logged_date, billable: e.is_billable, task: (e.task as any)?.title || 'No Task' })))}
+${JSON.stringify(recentTimeEntries?.map((e: any) => ({ id: e.id, duration_minutes: e.duration_minutes, description: e.description, date: e.logged_date, billable: e.is_billable, task: (e.task as any)?.title || 'No Task' })))}
 
 CAPABILITIES:
 1. Retrieval: Answer questions about tasks, deadlines, and projects.
