@@ -63,8 +63,8 @@ export default function ReportsPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const total = tasks.length;
-  const completed = tasks.filter(t => t.status === 'completed').length;
-  const overdue = tasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'completed').length;
+  const completed = tasks.filter(t => t.status === 'done').length;
+  const overdue = tasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done').length;
 
   // Workload distribution
   const workloadData = {
@@ -81,7 +81,7 @@ export default function ReportsPage() {
   // Project summary
   const projectSummary = projects.map(p => {
     const pTasks = tasks.filter(t => t.project_id === p.id);
-    const pDone = pTasks.filter(t => t.status === 'completed').length;
+    const pDone = pTasks.filter(t => t.status === 'done').length;
     return { ...p, totalTasks: pTasks.length, doneTasks: pDone, progress: pTasks.length > 0 ? Math.round((pDone / pTasks.length) * 100) : 0 };
   });
 
