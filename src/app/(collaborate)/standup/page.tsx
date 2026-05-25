@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import type { DailyUpdate, Profile, Task } from '@/lib/types';
+import type { DailyUpdate, Profile, Task, Project } from '@/lib/types';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 

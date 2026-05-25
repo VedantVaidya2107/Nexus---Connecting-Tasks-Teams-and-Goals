@@ -281,7 +281,7 @@ export default function TimeAnalyticsPage() {
         stacked: true,
         ticks: {
           color: '#94a3b8',
-          font: { size: 9, weight: '700', family: 'Inter, sans-serif' },
+          font: { size: 9, weight: 'bold', family: 'Inter, sans-serif' },
           maxRotation: 45,
           minRotation: 45,
         },
@@ -294,7 +294,7 @@ export default function TimeAnalyticsPage() {
         suggestedMax: thresholdHours + 20,
         ticks: {
           color: '#94a3b8',
-          font: { size: 10, weight: '600', family: 'Inter, sans-serif' },
+          font: { size: 10, weight: 'bold', family: 'Inter, sans-serif' },
           callback: (value: any) => `${value}h`,
         },
         grid: {
@@ -342,43 +342,48 @@ export default function TimeAnalyticsPage() {
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', marginRight: 4 }}>🔍 Filters</span>
 
         {/* Month */}
-        <select className="form-select" style={{ width: 'auto', padding: '7px 12px', fontSize: 13, fontWeight: 600 }}
+        <select className="form-select analytics-filter-select bold"
+          aria-label="Select Month" title="Select Month"
           value={selMonth} onChange={e => setSelMonth(Number(e.target.value))}>
           {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
         </select>
 
         {/* Year */}
-        <select className="form-select" style={{ width: 'auto', padding: '7px 12px', fontSize: 13, fontWeight: 600 }}
+        <select className="form-select analytics-filter-select bold"
+          aria-label="Select Year" title="Select Year"
           value={selYear} onChange={e => setSelYear(Number(e.target.value))}>
           {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
         </select>
 
-        <div style={{ width: 1, height: 28, background: 'var(--border)' }} />
+        <div className="divider-v" />
 
         {/* Member */}
-        <select className="form-select" style={{ width: 'auto', padding: '7px 12px', fontSize: 13 }}
+        <select className="form-select analytics-filter-select"
+          aria-label="Filter by Team Member" title="Filter by Team Member"
           value={selMember} onChange={e => setSelMember(e.target.value)}>
           <option value="all">👥 All Members</option>
           {members.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
         </select>
 
         {/* Project */}
-        <select className="form-select" style={{ width: 'auto', padding: '7px 12px', fontSize: 13 }}
+        <select className="form-select analytics-filter-select"
+          aria-label="Filter by Project" title="Filter by Project"
           value={selProject} onChange={e => setSelProject(e.target.value)}>
           <option value="all">📁 All Projects</option>
           {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
 
         {/* Billable */}
-        <select className="form-select" style={{ width: 'auto', padding: '7px 12px', fontSize: 13 }}
+        <select className="form-select analytics-filter-select"
+          aria-label="Filter by Billing Type" title="Filter by Billing Type"
           value={selBillable} onChange={e => setSelBillable(e.target.value as any)}>
           <option value="all">💼 All Types</option>
           <option value="billable">💰 Billable</option>
           <option value="non_billable">🚫 Non-Billable</option>
         </select>
 
-        <div style={{ flex: 1 }} />
-        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
+        <div className="flex-spacer" />
+        <span className="filter-bar-count">
           {MONTHS[selMonth]} {selYear} · {filtered.length} entries
         </span>
       </motion.div>
@@ -439,18 +444,7 @@ export default function TimeAnalyticsPage() {
                 type="number"
                 value={thresholdHours}
                 onChange={(e) => setThresholdHours(Math.max(1, Number(e.target.value)))}
-                style={{
-                  width: 54,
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: 6,
-                  padding: '2px 4px',
-                  fontSize: 12,
-                  fontWeight: 900,
-                  color: '#22c55e',
-                  textAlign: 'center',
-                  outline: 'none',
-                }}
+                className="threshold-input"
               />
               <span style={{ fontWeight: 600, color: '#e2e8f0' }}>hrs</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 6 }}>
