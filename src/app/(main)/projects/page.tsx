@@ -60,9 +60,9 @@ export default function ProjectsPage() {
     } else {
       // Map members into projects for easier access
       const allMembers = mRes.data || [];
-      const projectsWithMembers = (pRes.data || []).map(p => ({
+      const projectsWithMembers = (pRes.data || []).map((p: any) => ({
         ...p,
-        team_ids: allMembers.filter(m => m.project_id === p.id).map(m => m.user_id)
+        team_ids: allMembers.filter((m: any) => m.project_id === p.id).map((m: any) => m.user_id)
       }));
       setProjects(projectsWithMembers as Project[]);
     }
