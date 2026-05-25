@@ -6,6 +6,7 @@ export async function sendWelcomeEmail(email: string, fullName: string, temporar
 
   if (smtpUser && smtpPass) {
     try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nexus-connecting-tasks-teams-and-go.vercel.app';
       const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: { user: smtpUser, pass: smtpPass },
@@ -30,6 +31,10 @@ export async function sendWelcomeEmail(email: string, fullName: string, temporar
                 <p style="margin: 0 0 16px 0; color: #fff; font-weight: 600; font-size: 16px;">${email}</p>
                 <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 13px;">Temporary Password</p>
                 <p style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 3px; color: #c084fc; background: #1e1b4b; display: inline-block; padding: 8px 16px; border-radius: 6px; border: 1px solid #4c1d95;">${temporaryPassword}</p>
+              </div>
+
+              <div style="text-align: center; margin: 24px 0;">
+                <a href="${appUrl}/login" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);">Open Nexus Webapp</a>
               </div>
 
               <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 12px 16px; margin-top: 16px;">

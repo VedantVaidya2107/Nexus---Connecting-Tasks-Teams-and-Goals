@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 type SignUpStep = 'DETAILS' | 'OTP' | 'PASSWORD';
 type ForgotStep = 'EMAIL' | 'OTP' | 'RESET';
@@ -370,7 +370,6 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      <Toaster position="top-right" reverseOrder={false} />
       <div className="auth-orb-3" />
       <div className="auth-card glass-card">
         <div className="logo-area">
