@@ -281,7 +281,7 @@ export default function TimeAnalyticsPage() {
         stacked: true,
         ticks: {
           color: '#94a3b8',
-          font: { size: 9, weight: 'bold', family: 'Inter, sans-serif' },
+          font: { size: 9, weight: 'bold' as const, family: 'Inter, sans-serif' },
           maxRotation: 45,
           minRotation: 45,
         },
@@ -294,7 +294,7 @@ export default function TimeAnalyticsPage() {
         suggestedMax: thresholdHours + 20,
         ticks: {
           color: '#94a3b8',
-          font: { size: 10, weight: 'bold', family: 'Inter, sans-serif' },
+          font: { size: 10, weight: 'bold' as const, family: 'Inter, sans-serif' },
           callback: (value: any) => `${value}h`,
         },
         grid: {
@@ -445,6 +445,9 @@ export default function TimeAnalyticsPage() {
                 value={thresholdHours}
                 onChange={(e) => setThresholdHours(Math.max(1, Number(e.target.value)))}
                 className="threshold-input"
+                aria-label="Productivity threshold in hours"
+                title="Productivity threshold in hours"
+                placeholder="207"
               />
               <span style={{ fontWeight: 600, color: '#e2e8f0' }}>hrs</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 6 }}>

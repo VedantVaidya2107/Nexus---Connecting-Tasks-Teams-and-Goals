@@ -524,12 +524,12 @@ export default function TasksPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 3, textTransform: 'uppercase' }}>FROM</div>
-                      <input className="form-input" type="time" value={timeFromTime} onChange={e => setTimeFromTime(e.target.value)} style={{ fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }} />
+                      <input className="form-input" type="time" value={timeFromTime} onChange={e => setTimeFromTime(e.target.value)} style={{ fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }} aria-label="Start time" title="Start time" placeholder="09:00" />
                     </div>
                     <span style={{ fontSize: 18, color: 'var(--text-muted)', paddingTop: 16 }}>→</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 3, textTransform: 'uppercase' }}>TO</div>
-                      <input className="form-input" type="time" value={timeToTime} onChange={e => setTimeToTime(e.target.value)} style={{ fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }} />
+                      <input className="form-input" type="time" value={timeToTime} onChange={e => setTimeToTime(e.target.value)} style={{ fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }} aria-label="End time" title="End time" placeholder="10:00" />
                     </div>
                   </div>
                   {computedRangeMinsTask && computedRangeMinsTask > 0 ? (
@@ -594,6 +594,9 @@ export default function TasksPage() {
                     max={todayStr}
                     onChange={e => setTimeDate(e.target.value)}
                     style={{ flex: 1, borderColor: timeDateRestricted ? '#ef4444' : undefined }}
+                    aria-label="Log date"
+                    title="Log date"
+                    placeholder={todayStr}
                   />
                   <button className="btn btn-primary" onClick={logTimeOnTask} disabled={logginTime || timeDateRestricted || totalTimeMins <= 0} style={{ whiteSpace: 'nowrap', opacity: (logginTime || timeDateRestricted || totalTimeMins <= 0) ? 0.6 : 1 }}>
                     {logginTime ? 'Logging…' : '+ Log Time'}

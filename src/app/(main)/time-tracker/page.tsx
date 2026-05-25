@@ -391,7 +391,9 @@ export default function TimeTrackerPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Timer Task:</span>
             <select className="form-select" value={timerTaskId} onChange={e => setTimerTaskId(e.target.value)}
-              style={{ width: 'auto', minWidth: 200, padding: '6px 12px', fontSize: 13 }}>
+              style={{ width: 'auto', minWidth: 200, padding: '6px 12px', fontSize: 13 }}
+              aria-label="Select task for timer"
+              title="Select task for timer">
               <option value="">No task (free timer)</option>
               {/* Team members only see their assigned tasks */}
               {tasks.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
@@ -417,13 +419,15 @@ export default function TimeTrackerPage() {
             <div style={{ flex: 1 }} />
             {/* Billable filter */}
             <select className="form-select" style={{ width: 'auto', padding: '5px 10px', fontSize: 12 }}
-              value={filterBillable} onChange={e => setFilterBillable(e.target.value as any)}>
+              value={filterBillable} onChange={e => setFilterBillable(e.target.value as any)}
+              aria-label="Filter by billing type" title="Filter by billing type">
               <option value="all">All Types</option>
               <option value="billable">💰 Billable</option>
               <option value="non_billable">🚫 Non-billable</option>
             </select>
             <select className="form-select" style={{ width: 'auto', padding: '5px 10px', fontSize: 12 }}
-              value={filterRange} onChange={e => setFilterRange(e.target.value as FilterRange)}>
+              value={filterRange} onChange={e => setFilterRange(e.target.value as FilterRange)}
+              aria-label="Filter by date range" title="Filter by date range">
               <option value="today">Today</option>
               <option value="this_week">This Week</option>
               <option value="this_month">This Month</option>
@@ -453,13 +457,15 @@ export default function TimeTrackerPage() {
             )}
             {isPrivileged && (
               <select className="form-select" style={{ width: 'auto', padding: '5px 10px', fontSize: 12 }}
-                value={filterMember} onChange={e => setFilterMember(e.target.value)}>
+                value={filterMember} onChange={e => setFilterMember(e.target.value)}
+                aria-label="Filter by team member" title="Filter by team member">
                 <option value="all">All Members</option>
                 {members.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
               </select>
             )}
             <select className="form-select" style={{ width: 'auto', padding: '5px 10px', fontSize: 12 }}
-              value={filterProject} onChange={e => setFilterProject(e.target.value)}>
+              value={filterProject} onChange={e => setFilterProject(e.target.value)}
+              aria-label="Filter by project" title="Filter by project">
               <option value="all">All Projects</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
@@ -619,7 +625,8 @@ export default function TimeTrackerPage() {
                     <span>Task (optional)</span>
                     {!isPrivileged && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>🔒 Your assigned tasks only</span>}
                   </label>
-                  <select className="form-select" value={formTaskId} onChange={e => setFormTaskId(e.target.value)}>
+                  <select className="form-select" value={formTaskId} onChange={e => setFormTaskId(e.target.value)}
+                    aria-label="Select task (optional)" title="Select task (optional)">
                     <option value="">No task</option>
                     {tasks.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
                   </select>
@@ -640,7 +647,10 @@ export default function TimeTrackerPage() {
                   <input className="form-input" type="date" value={formDate}
                     min={minAllowedDate} max={todayISO()}
                     onChange={e => setFormDate(e.target.value)}
-                    style={{ borderColor: dateError ? '#ef4444' : undefined }} />
+                    style={{ borderColor: dateError ? '#ef4444' : undefined }}
+                    aria-label="Log date"
+                    title="Log date"
+                    placeholder={todayISO()} />
                   {dateError && (
                     <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', fontSize: 12, color: '#ef4444' }}>
                       ⚠️ {dateError}
@@ -673,13 +683,15 @@ export default function TimeTrackerPage() {
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, fontWeight: 700, textTransform: 'uppercase' }}>FROM</div>
                         <input className="form-input" type="time" value={formFromTime} onChange={e => setFormFromTime(e.target.value)}
-                          style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 700, textAlign: 'center' }} />
+                          style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 700, textAlign: 'center' }}
+                          aria-label="Start time" title="Start time" placeholder="09:00" />
                       </div>
                       <div style={{ fontSize: 22, color: 'var(--text-muted)', paddingTop: 20, fontWeight: 300 }}>→</div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, fontWeight: 700, textTransform: 'uppercase' }}>TO</div>
                         <input className="form-input" type="time" value={formToTime} onChange={e => setFormToTime(e.target.value)}
-                          style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 700, textAlign: 'center', borderColor: formToTime && computedRangeMins !== null && computedRangeMins <= 0 ? '#ef4444' : undefined }} />
+                          style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: 700, textAlign: 'center', borderColor: formToTime && computedRangeMins !== null && computedRangeMins <= 0 ? '#ef4444' : undefined }}
+                          aria-label="End time" title="End time" placeholder="10:00" />
                       </div>
                     </div>
                     <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 10, background: computedRangeMins && computedRangeMins > 0 ? 'rgba(99,102,241,0.12)' : 'var(--bg-card)', border: `1px solid ${computedRangeMins && computedRangeMins > 0 ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`, transition: 'all 0.2s' }}>
