@@ -38,7 +38,7 @@ export default function ProjectsPage() {
         .select('project_id')
         .eq('user_id', user?.id);
       
-      const projectIds = memberProjects?.map(mp => mp.project_id) || [];
+      const projectIds = memberProjects?.map((mp: any) => mp.project_id) || [];
       if (projectIds.length === 0) {
         setProjects([]);
         setLoading(false);
