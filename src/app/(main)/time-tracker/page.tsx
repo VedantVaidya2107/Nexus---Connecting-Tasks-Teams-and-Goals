@@ -183,19 +183,64 @@ export default function TimeTrackerPage() {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   // ── Stopwatch ─────────────────────────────────────────────────
+  // Load timer from local storage on mount
   useEffect(() => {
-    if (timerRunning) {
-      intervalRef.current = setInterval(() => setTimerSeconds(s => s + 1), 1000);
+    const saved = localStorage.getItem('nexus_timer');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.running && parsed.startTime) {
+          const start = new Date(parsed.startTime);
+          const elapsed = Math.floor((Date.now() - start.getTime()) / 1000);
+          setTimerStartTime(start);
+          setTimerSeconds(elapsed > 0 ? elapsed : 0);
+          setTimerTaskId(parsed.taskId || '');
+          setTimerRunning(true);
+        }
+      } catch (err) {}
+    }
+  }, []);
+
+  // Sync timer state to local storage
+  useEffect(() => {
+    if (timerRunning && timerStartTime) {
+      localStorage.setItem('nexus_timer', JSON.stringify({
+        running: true,
+        startTime: timerStartTime.toISOString(),
+        taskId: timerTaskId
+      }));
+    } else if (!timerRunning) {
+      localStorage.removeItem('nexus_timer');
+    }
+  }, [timerRunning, timerStartTime, timerTaskId]);
+
+  useEffect(() => {
+    if (timerRunning && timerStartTime) {
+      intervalRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - timerStartTime.getTime()) / 1000);
+        setTimerSeconds(elapsed > 0 ? elapsed : 0);
+      }, 1000);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [timerRunning]);
+  }, [timerRunning, timerStartTime]);
 
-  const startTimer = () => { setTimerSeconds(0); setTimerRunning(true); setTimerStartTime(new Date()); };
+  const startTimer = () => { 
+    const now = new Date();
+    setTimerStartTime(now);
+    setTimerSeconds(0); 
+    setTimerRunning(true); 
+  };
+  
   const stopTimer = () => {
     setTimerRunning(false);
-    if (timerSeconds < 60) { toast.error('Timer must run for at least 1 minute'); setTimerSeconds(0); setTimerStartTime(null); return; }
+    if (timerSeconds < 60) { 
+      toast.error('Timer must run for at least 1 minute'); 
+      setTimerSeconds(0); 
+      setTimerStartTime(null); 
+      return; 
+    }
     const totalMins = Math.round(timerSeconds / 60);
     openCreate(timerTaskId || undefined, totalMins, timerStartTime);
     setTimerSeconds(0);
