@@ -28,6 +28,7 @@ import {
   Ban,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import AttendanceWidget from '@/components/AttendanceWidget';
 
 const Counter = ({ value }: { value: number }) => {
   const [count, setCount] = useState(0);
@@ -299,6 +300,11 @@ export default function DashboardPage() {
           ＋ New Task
         </button>
       </div>
+      {/* Attendance Widget */}
+      <div style={{ marginBottom: '20px' }}>
+        <AttendanceWidget />
+      </div>
+
       <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '24px' }}>
         {kpis.map((kpi, idx) => {
           const Icon = kpi.icon;

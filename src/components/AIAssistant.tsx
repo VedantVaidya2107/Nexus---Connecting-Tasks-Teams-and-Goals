@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, X, Minimize2, Maximize2, Bot } from 'lucide-react';
+import { Send, Sparkles, X, Minimize2, Maximize2, Bot, Mic, MicOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 export default function AIAssistant() {
   const { profile, session } = useAuth();
@@ -13,6 +14,65 @@ export default function AIAssistant() {
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Initialize SpeechRecognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const rec = new SpeechRecognition();
+        rec.continuous = false;
+        rec.interimResults = false;
+        rec.lang = 'en-US';
+
+        rec.onstart = () => {
+          setIsListening(true);
+        };
+
+        rec.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          if (transcript) {
+            setInput(prev => prev + (prev ? ' ' : '') + transcript);
+          }
+        };
+
+        rec.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setIsListening(false);
+          if (event.error === 'not-allowed') {
+            toast.error('Microphone permission blocked. Please enable it in browser settings!');
+          } else {
+            toast.error('Voice typing error. Please try again!');
+          }
+        };
+
+        rec.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current = rec;
+      }
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      toast.error('Voice typing is not supported in this browser. Please try Chrome or Safari!');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      try {
+        recognitionRef.current.start();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
 
   // Initialize with welcome message
   useEffect(() => {
@@ -126,12 +186,31 @@ export default function AIAssistant() {
               <div className="ai-input-area">
                 <input 
                   type="text" 
-                  placeholder="Ask anything..." 
+                  placeholder={isListening ? "Listening..." : "Ask anything..."} 
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                  disabled={isLoading}
+                  style={isListening ? { borderColor: '#ef4444', boxShadow: '0 0 10px rgba(239, 68, 68, 0.2)' } : {}}
                 />
-                <button type="button" aria-label="Send message" title="Send message" onClick={sendMessage} disabled={!input.trim() || isLoading}>
+                
+                {/* Voice Typing Button */}
+                <button 
+                  type="button" 
+                  aria-label={isListening ? "Stop listening" : "Start voice typing"} 
+                  title={isListening ? "Stop listening" : "Start voice typing"} 
+                  onClick={toggleListening}
+                  className={`ai-voice-btn ${isListening ? 'listening' : ''}`}
+                  disabled={isLoading}
+                >
+                  {isListening ? (
+                    <MicOff size={18} />
+                  ) : (
+                    <Mic size={18} />
+                  )}
+                </button>
+
+                <button type="button" aria-label="Send message" title="Send message" onClick={sendMessage} disabled={!input.trim() || isLoading || isListening}>
                   <Send size={18} />
                 </button>
               </div>

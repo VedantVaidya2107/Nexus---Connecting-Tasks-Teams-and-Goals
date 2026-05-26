@@ -11,6 +11,7 @@ const NAV_ITEMS = [
     { label: 'All Tasks', href: '/tasks', icon: '📋' },
     { label: 'Projects', href: '/projects', icon: '📁' },
     { label: 'Time Tracker', href: '/time-tracker', icon: '⏱️' },
+    { label: 'Attendance', href: '/attendance', icon: '👆' },
   ]},
   { section: 'Collaborate', items: [
     { label: 'Team', href: '/team', icon: '👥' },
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { section: 'Admin', items: [
     { label: 'Team Management', href: '/team/manage', icon: '🛡️' },
     { label: 'Time Analytics', href: '/admin/time-analytics', icon: '📊' },
+    { label: 'Attendance Report', href: '/admin/attendance', icon: '📋' },
   ]},
 ];
 

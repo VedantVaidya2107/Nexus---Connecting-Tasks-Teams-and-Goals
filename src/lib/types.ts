@@ -128,6 +128,31 @@ export interface Notification {
   created_at: string;
 }
 
+export interface AttendanceRecord {
+  id: string;
+  user_id: string;
+  date: string;
+  check_in_time: string | null;
+  check_out_time: string | null;
+  check_in_ip: string | null;
+  check_out_ip: string | null;
+  network_verified: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  user?: Profile;
+}
+
+export interface WifiSettings {
+  id: string;
+  network_name: string;
+  allowed_ips: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // ============================================
 // Status/Priority Display Helpers
 // ============================================
