@@ -5,6 +5,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
+  color-scheme: dark;
   /* Dynamic Deep Space Theme */
   --bg-primary: #050b14;
   --bg-secondary: rgba(17, 24, 39, 0.6);
@@ -168,7 +169,7 @@ input, textarea, select { font-family: inherit; color: inherit; }
   box-shadow: 0 0 16px var(--accent-glow);
 }
 
-.sidebar-logo h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+.sidebar-logo h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; color: var(--text-primary); }
 .sidebar-logo span { font-size: 11px; color: var(--text-muted); display: block; margin-top: 2px; }
 
 .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; overflow-x: hidden; }
@@ -1253,6 +1254,7 @@ input, textarea, select { font-family: inherit; color: inherit; }
    Modernized Light Mode Overrides
    ============================================ */
 :root.light-mode {
+  color-scheme: light;
   --bg-primary: #f8fafc;
   --bg-secondary: rgba(255, 255, 255, 0.7);
   --bg-card: rgba(255, 255, 255, 0.85);
@@ -1536,5 +1538,16 @@ input, textarea, select { font-family: inherit; color: inherit; }
     box-shadow: 0 0 16px rgba(124, 58, 237, 0.5);
     border-color: rgba(124, 58, 237, 1);
   }
+}
+
+/* ============================================
+   Light Mode Overrides for Modal
+   ============================================ */
+.light-mode .modal-overlay {
+  background: rgba(15, 23, 42, 0.3);
+}
+
+.light-mode .modal {
+  background: #ffffff;
 }
 

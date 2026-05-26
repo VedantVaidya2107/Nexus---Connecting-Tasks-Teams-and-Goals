@@ -110,6 +110,7 @@ export default function TimeTrackerPage() {
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
 
   // Form - shared
+  const [formProjectId, setFormProjectId] = useState('');
   const [formTaskId, setFormTaskId] = useState('');
   const [formDesc, setFormDesc] = useState('');
   const [formDate, setFormDate] = useState(todayISO());
@@ -122,6 +123,7 @@ export default function TimeTrackerPage() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerTaskId, setTimerTaskId] = useState('');
+  const [timerStartTime, setTimerStartTime] = useState<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Computed ─────────────────────────────────────────────────
@@ -190,31 +192,41 @@ export default function TimeTrackerPage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [timerRunning]);
 
-  const startTimer = () => { setTimerSeconds(0); setTimerRunning(true); };
+  const startTimer = () => { setTimerSeconds(0); setTimerRunning(true); setTimerStartTime(new Date()); };
   const stopTimer = () => {
     setTimerRunning(false);
-    if (timerSeconds < 60) { toast.error('Timer must run for at least 1 minute'); setTimerSeconds(0); return; }
+    if (timerSeconds < 60) { toast.error('Timer must run for at least 1 minute'); setTimerSeconds(0); setTimerStartTime(null); return; }
     const totalMins = Math.round(timerSeconds / 60);
-    openCreate(timerTaskId || undefined, totalMins);
+    openCreate(timerTaskId || undefined, totalMins, timerStartTime);
     setTimerSeconds(0);
+    setTimerStartTime(null);
   };
 
   // ── Modal helpers ─────────────────────────────────────────────
   const resetForm = () => {
-    setFormTaskId(''); setFormDesc(''); setFormDate(todayISO()); setFormBillable(true);
+    setFormProjectId(''); setFormTaskId(''); setFormDesc(''); setFormDate(todayISO()); setFormBillable(true);
     setFormFromTime('09:00'); setFormToTime('');
   };
 
-  const openCreate = (taskId?: string, prefillMins?: number) => {
+  const openCreate = (taskId?: string, prefillMins?: number, startTime?: Date | null) => {
     setEditEntry(null); resetForm();
+    if (taskId) {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) setFormProjectId(task.project_id || '');
+    }
     setFormTaskId(taskId || '');
-    if (prefillMins) {
-      const startMins = 9 * 60;
-      const endMins = startMins + prefillMins;
-      const endH = Math.floor(endMins / 60) % 24;
-      const endM = endMins % 60;
-      setFormFromTime('09:00');
+    if (prefillMins && startTime) {
+      const startH = startTime.getHours();
+      const startM = startTime.getMinutes();
+      const end = new Date(startTime.getTime() + prefillMins * 60000);
+      const endH = end.getHours();
+      const endM = end.getMinutes();
+      setFormFromTime(`${startH.toString().padStart(2, '0')}:${startM.toString().padStart(2, '0')}`);
       setFormToTime(`${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`);
+    } else {
+      const now = new Date();
+      setFormFromTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
+      setFormToTime('');
     }
     setShowModal(true);
   };
@@ -225,7 +237,7 @@ export default function TimeTrackerPage() {
       return;
     }
     setEditEntry(e);
-    setFormTaskId(e.task_id || ''); setFormDesc(e.description || '');
+    setFormProjectId((e.task as any)?.project_id || ''); setFormTaskId(e.task_id || ''); setFormDesc(e.description || '');
     setFormDate(e.logged_date); setFormBillable(e.is_billable ?? true);
     
     // Map duration_minutes to a From-To range starting at 09:00
@@ -242,6 +254,8 @@ export default function TimeTrackerPage() {
 
   // ── Save ──────────────────────────────────────────────────────
   const saveEntry = async () => {
+    if (!formProjectId) { toast.error('Project is required'); return; }
+    if (!formTaskId) { toast.error('Task is required'); return; }
     if (dateError) { toast.error(dateError); return; }
     if (totalFormMins <= 0) {
       toast.error('Set a valid From–To time range');
@@ -619,16 +633,27 @@ export default function TimeTrackerPage() {
 
               <div className="modal-body">
 
+                {/* ── Project ── */}
+                <div className="form-group">
+                  <label className="form-label">Project *</label>
+                  <select className="form-select" value={formProjectId} onChange={e => { setFormProjectId(e.target.value); setFormTaskId(''); }}
+                    aria-label="Select project" title="Select project">
+                    <option value="" disabled>Select a project</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+
                 {/* ── Task (role-filtered) ── */}
                 <div className="form-group">
                   <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span>Task (optional)</span>
+                    <span>Task *</span>
                     {!isPrivileged && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>🔒 Your assigned tasks only</span>}
                   </label>
                   <select className="form-select" value={formTaskId} onChange={e => setFormTaskId(e.target.value)}
-                    aria-label="Select task (optional)" title="Select task (optional)">
-                    <option value="">No task</option>
-                    {tasks.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+                    disabled={!formProjectId}
+                    aria-label="Select task" title="Select task">
+                    <option value="" disabled>Select a task</option>
+                    {tasks.filter(t => t.project_id === formProjectId).map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
                   </select>
                 </div>
 
@@ -659,8 +684,8 @@ export default function TimeTrackerPage() {
                   {/* Date chips */}
                   <div style={{ marginTop: 6, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                     {(isPrivileged
-                      ? [{ l: 'Today', d: dateNDaysAgo(0) }, { l: 'Yesterday', d: dateNDaysAgo(1) }, { l: '-3d', d: dateNDaysAgo(3) }, { l: '-7d', d: dateNDaysAgo(7) }, { l: '-14d', d: dateNDaysAgo(14) }, { l: '-30d', d: dateNDaysAgo(30) }]
-                      : Array.from({ length: 7 }, (_, i) => ({ l: i === 0 ? 'Today' : i === 1 ? 'Yesterday' : `-${i}d`, d: dateNDaysAgo(i) }))
+                      ? [{ l: 'Today', d: dateNDaysAgo(0) }, { l: 'Yesterday', d: dateNDaysAgo(1) }]
+                      : [{ l: 'Today', d: dateNDaysAgo(0) }, { l: 'Yesterday', d: dateNDaysAgo(1) }]
                     ).map(({ l, d }) => (
                       <button key={d} type="button" onClick={() => setFormDate(d)} style={{
                         padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer',
@@ -706,14 +731,7 @@ export default function TimeTrackerPage() {
                         </div>
                       )}
                     </div>
-                    <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 10, color: 'var(--text-muted)', alignSelf: 'center', fontWeight: 600 }}>Quick:</span>
-                      {[{ l: '30m', m: 30 }, { l: '1h', m: 60 }, { l: '1.5h', m: 90 }, { l: '2h', m: 120 }, { l: '4h', m: 240 }, { l: '8h', m: 480 }].map(({ l, m }) => (
-                        <button key={l} type="button" onClick={() => { const f = timeToMins(formFromTime) ?? 540; setFormFromTime(minsToTime(f)); setFormToTime(minsToTime(f + m)); }}
-                          style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-secondary)', transition: 'all 0.15s' }}>{l}</button>
-                      ))}
                     </div>
-                  </div>
                 </div>
 
                 {/* ── Description ── */}
@@ -727,8 +745,8 @@ export default function TimeTrackerPage() {
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={closeModal}>Cancel</button>
                 <button className="btn btn-primary" onClick={saveEntry}
-                  disabled={!!dateError || totalFormMins <= 0}
-                  style={{ opacity: (!!dateError || totalFormMins <= 0) ? 0.6 : 1 }}>
+                  disabled={!!dateError || totalFormMins <= 0 || !formProjectId || !formTaskId}
+                  style={{ opacity: (!!dateError || totalFormMins <= 0 || !formProjectId || !formTaskId) ? 0.6 : 1 }}>
                   {editEntry ? 'Update Entry' : 'Log Time'}
                 </button>
               </div>
