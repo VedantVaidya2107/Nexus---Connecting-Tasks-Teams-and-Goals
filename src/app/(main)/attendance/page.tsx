@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AttendanceRecord } from '@/lib/types';
@@ -141,14 +142,17 @@ export default function AttendancePage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div className="spinner" />
-      </div>
+      <AppLayout>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+          <div className="spinner" />
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '32px 24px' }}>
+    <AppLayout>
+      <div style={{ maxWidth: '860px', margin: '0 auto', padding: '32px 24px' }}>
 
       {/* Page Header */}
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
@@ -420,5 +424,6 @@ export default function AttendancePage() {
         }
       `}</style>
     </div>
+    </AppLayout>
   );
 }
