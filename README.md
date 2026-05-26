@@ -9,6 +9,7 @@ Nexus is a modern, high-performance project management web application designed 
   - **Update Status**: Change task statuses (e.g., "Set task X to Done") through natural language.
   - **Reassign Tasks**: Hand off tasks to different team members via chat.
   - **AI Voice Standup**: Record status reports by voice; the AI transcribes and populates daily standups automatically.
+- **WiFi-Secured Attendance**: Check in/out system restricted to specific office IP addresses or subnets (CIDR ranges) to ensure on-site presence, complete with admin attendance reports and CSV exports.
 - **Enforced Security (Force Password Change)**:
   - A secure onboarding flow that flags new team members with `must_change_password: true`.
   - Upon first login, users are blocked by a non-dismissible, high-fidelity glassmorphic modal forcing them to set a permanent password.
